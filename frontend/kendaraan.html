@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Tambah Kendaraan</title>
+  <link rel="stylesheet" href="./css/master/kendaraan.css">
+</head>
+<body>
+  <a href="index.html" class="btn btn-back">← Kembali ke Menu</a>
+  <div class="container-flex">
+    <div class="sidebar">
+      <h2>Tambah Kendaraan</h2>
+      <form id="kendaraanForm">
+        <input type="hidden" id="kendaraan_id">
+        <input type="text" id="dt_mobil" placeholder="Nama/Tipe Mobil" required>
+        <input type="text" id="plat" placeholder="Plat Nomor" required maxlength="15">
+        <button type="submit" class="btn" id="submitBtn">Simpan</button>
+        <button type="button" class="btn btn-back" id="cancelEditBtn">Batal</button>
+      </form>
+      <h3>Cari Kendaraan</h3>
+      <input type="text" placeholder="Ketik nama/plat kendaraan..." id="kendaraan_input" autocomplete="off">
+    </div>
+    <div class="main-content">
+      <h3>Daftar Kendaraan</h3>
+      <table id="kendaraanTable">
+        <thead>
+          <tr>
+            <th style="width: 50px;">No</th>
+            <th style="width: 35%;">Nama/Tipe Mobil</th>
+            <th style="width: 25%;">Plat Nomor</th>
+            <th style="width: 120px;">Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Data kendaraan akan dimuat di sini -->
+        </tbody>
+      </table>
+      <div id="pagination" class="pagination"></div>
+    </div>
+  </div>
+  <script src="./js/master/kendaraan.js"></script>
+</body>
+</html>

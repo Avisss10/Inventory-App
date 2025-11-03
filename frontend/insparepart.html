@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Input Stok Sparepart</title>
+    <link rel="stylesheet" href="./css/sparepart/insparepart.css">
+</head>
+<body>
+    <a href="index.html" class="btn btn-back">← Kembali ke Menu</a>
+    <div class="container-flex">
+        <div class="sidebar">
+            <h2>Input Sparepart</h2>
+            <form id="stokSparepartForm">
+                <input type="hidden" id="sparepart_id">
+                <label for="tgl_sparepart_masuk">Tanggal Sparepart Masuk</label>
+                <input type="date" id="tgl_sparepart_masuk" name="tgl_sparepart_masuk" required>
+
+                <label for="nama_sparepart">Nama Sparepart</label>
+                <input type="text" id="nama_sparepart" name="nama_sparepart" required>
+
+                <label for="no_seri">No. Seri</label>
+                <input type="text" id="no_seri" name="no_seri" required>
+
+                <label for="jumlah">Jumlah</label>
+                <input type="number" id="jumlah" name="jumlah" min="1" value="1" required>
+
+                <label for="satuan">Satuan</label>
+                <select id="satuan" name="satuan" required>
+                    <option value="pcs">pcs</option>
+                    <option value="liter">liter</option>
+                    <option value="set">set</option>
+                    <option value="lembar">lembar</option>
+                    <option value="galon">galon</option>
+                </select>
+
+                <label for="harga">Harga</label>
+                <input type="text" id="harga" name="harga" required>
+
+                <label>Vendor:</label>
+                <input type="text" id="vendor_input" list="vendorList" required>
+                <datalist id="vendorList"></datalist>
+
+                <button type="submit" class="btn" id="submitBtn">Simpan</button>
+                <button type="button" class="btn btn-back" id="cancelEditBtn">Batal</button>
+            </form>
+            <h3>Cari Sparepart</h3>
+            <input type="text" placeholder="Ketik nama/no seri sparepart..." id="sparepart_input" autocomplete="off">
+        </div>
+        <div class="main-content">
+            <h3>Daftar Stok Sparepart</h3>
+            <table id="sparepartTable">
+                <thead>
+                    <tr>
+                        <th style="width:40px;text-align:center;">No</th>
+                        <th style="width:100px;text-align:center;">Tanggal Masuk</th>
+                        <th>Nama Sparepart</th>
+                        <th style="width:90px;text-align:center;">No. Seri</th>
+                        <th style="width:65px;text-align:right;">Jumlah</th>
+                        <th style="width:65px;text-align:right;">Harga</th>
+                        <th style="width:200px;text-align:center;">Vendor</th>
+                        <th style="width:110px;text-align:center;">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            <div id="pagination" class="pagination"></div>
+        </div>
+    </div>
+
+    <script src="./js/sparepart/insparepart.js"></script>
+</body>
+</html>

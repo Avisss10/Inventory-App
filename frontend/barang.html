@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Barang</title>
+  <link rel="stylesheet" href="./css/barang/barang.css">
+</head>
+<body>
+  <a href="index.html" class="btn-back">← Kembali ke Menu</a>
+
+  <h2>Tambah Barang</h2>
+  
+  <div class="form-container">
+    <form id="barangForm">
+      <div class="form-row">
+        <div class="form-group half">
+          <label>No Seri:</label>
+          <input type="text" id="no_seri" required>
+        </div>
+        <div class="form-group half">
+          <label>Nama Barang:</label>
+          <input type="text" id="nama_barang" required>
+        </div>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group half">
+          <label>Merk:</label>
+          <input type="text" id="merk" required>
+        </div>
+        <div class="form-group half">
+          <label>Satuan:</label>
+          <select id="satuan" required>
+            <option value="">-- Pilih Satuan --</option>
+            <option value="pcs">pcs</option>
+            <option value="liter">liter</option>
+            <option value="set">set</option>
+            <option value="lembar">lembar</option>
+            <option value="meter">meter</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group half">
+          <label>Jumlah:</label>
+          <input type="number" id="jumlah" required disabled step="1">
+        </div>
+        <div class="form-group half">
+          <label>Harga Satuan:</label>
+          <input type="text" id="harga_display" required>
+          <input type="hidden" id="harga">
+        </div>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group half">
+          <label>Vendor:</label>
+          <input type="text" id="vendor_input" list="vendorList" required>
+          <datalist id="vendorList"></datalist>
+        </div> 
+        <div class="form-group half">
+          <label>Total:</label>
+          <input type="text" id="total" readonly>
+        </div>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group half">
+          <label>Kendaraan:</label>
+          <input type="text" id="kendaraan_input" list="kendaraanList" required>
+          <datalist id="kendaraanList"></datalist>
+        </div>
+        <div class="form-group half">
+          <label>Penanggung Jawab:</label>
+          <input type="text" id="penanggung_jawab" required>
+        </div>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group half">
+          <label>Tanggal:</label>
+          <input type="date" id="tanggal" required>
+        </div>
+        <div class="form-group half">
+          <label>&nbsp;</label>
+          <button type="submit">Tambah Ke Review</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <h3>Review Daftar Barang</h3>
+  
+  <div class="table-container">
+    <table id="reviewTable">
+      <thead>
+        <tr>
+          <th>No</th>
+          <th>No Seri</th>
+          <th>Nama Barang</th>
+          <th>Merk</th>
+          <th>Jumlah</th>
+          <th>Satuan</th>
+          <th>Harga Satuan</th>
+          <th>Total</th>
+          <th>Vendor</th>
+          <th>Kendaraan</th>
+          <th>Penanggung Jawab</th>
+          <th>Tanggal</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div id="reviewSummary"></div>
+  
+  <button id="finalSave">Simpan Final ke Database</button>
+
+  <script src="./js/barang/barang.js"></script>
+</body>
+</html>

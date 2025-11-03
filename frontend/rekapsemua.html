@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rekap Data</title>
+  <link rel="stylesheet" href="./css/sparepart/rekapsemua.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+  <a href="index.html" class="btn-back">← Kembali ke Menu</a>
+  <h2>Rekap Data</h2>
+
+  <div class="filter-container">
+    <form id="filterForm">
+      <div class="filter-row">
+        <div class="filter-group wide">
+          <label>Tipe Laporan:</label>
+          <select id="tipeLaporan">
+            <option value="stok">Stok Gudang</option>
+            <option value="kendaraan">Pemakaian Kendaraan</option>
+            <option value="vendor">Vendor</option>
+            <option value="pemakaian_vendor">Pemakaian per Vendor</option>
+          </select>
+        </div>
+
+        <div class="filter-group filter-kendaraan filter-vendor filter-pemakaian_vendor" id="filterWaktuGroup">
+          <label>Filter Waktu:</label>
+          <select id="filterType">
+            <option value="hari">Hari Ini</option>
+            <option value="minggu">7 Hari Terakhir</option>
+            <option value="bulan">Bulan Ini</option>
+            <option value="manual">Tanggal Manual</option>
+          </select>
+        </div>
+
+        <div class="filter-group narrow filter-kendaraan filter-vendor filter-pemakaian_vendor filter-hidden" id="filterStartGroup">
+          <label>Dari:</label>
+          <input type="date" id="filterStart">
+        </div>
+
+        <div class="filter-group narrow filter-kendaraan filter-vendor filter-pemakaian_vendor filter-hidden" id="filterEndGroup">
+          <label>Sampai:</label>
+          <input type="date" id="filterEnd">
+        </div>
+      </div>
+      
+      <div class="filter-row">
+        <div class="filter-group wide filter-stok filter-pemakaian_vendor">
+          <label>Nama Barang:</label>
+          <input type="text" id="barangFilter" placeholder="Ketik untuk mencari barang..." list="barangList">
+          <datalist id="barangList"></datalist>
+        </div>
+
+        <div class="filter-group wide filter-stok filter-vendor filter-kendaraan filter-pemakaian_vendor">
+          <label>Vendor:</label>
+          <select id="vendorFilter">
+            <option value="">Semua Vendor</option>
+          </select>
+        </div>
+
+        <div class="filter-group filter-stok">
+          <label>Filter Stok:</label>
+          <select id="stokFilter">
+            <option value="semua">Semua Stok</option>
+            <option value="habis">Stok = 0 Item</option>
+          </select>
+        </div>
+
+        <div class="filter-group filter-stok">
+          <label>Satuan:</label>
+          <select id="satuanFilter">
+            <option value="semua">Semua Satuan</option>
+            <option value="pcs">Pcs</option>
+            <option value="liter">Liter</option>
+            <option value="set">Set</option>
+            <option value="lembar">Lembar</option>
+            <option value="galon">Galon</option>
+            <option value="meter">Meter</option>
+          </select>
+        </div>
+
+        <div class="filter-group wide filter-kendaraan filter-pemakaian_vendor filter-hidden">
+          <label>Kendaraan:</label>
+          <input type="text" id="kendaraanFilter" placeholder="Ketik nama/plat kendaraan..." list="kendaraanFilterList">
+          <datalist id="kendaraanFilterList"></datalist>
+        </div>
+
+        <div class="filter-group filter-kendaraan filter-hidden">
+          <label>Jenis Barang:</label>
+          <select id="jenisBarangFilter">
+            <option value="semua">Semua</option>
+            <option value="sparepart">Sparepart</option>
+            <option value="ban">Ban</option>
+          </select>
+        </div>
+
+        <div class="button-group">
+          <button type="submit">Terapkan Filter</button>
+          <button type="button" id="resetFilter" class="btn-reset">Reset</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div id="lowStockAlert" class="alert-low-stock filter-hidden"></div>
+
+  <div class="export-container">
+    <span class="export-label">Export Data:</span>
+    <div class="button-group">
+      <button id="exportExcel" class="btn-export">📊 Export Excel</button>
+      <button id="exportPDF" class="btn-export-pdf">📄 Export PDF</button>
+    </div>
+  </div>
+
+  <div class="table-container">
+    <table id="rekapTable">
+      <thead id="tableHead">
+        <tr>
+          <th>No</th>
+          <th>No Seri</th>
+          <th>Nama Sparepart</th>
+          <th>Jumlah</th>
+          <th>Satuan</th>
+          <th>Harga Satuan</th>
+          <th>Total</th>
+          <th>Vendor</th>
+          <th>Tanggal</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td colspan="10" class="loading">Memuat data...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="summary-container">
+    <div id="summary">
+      <strong>Total Barang (Keseluruhan):</strong> 0<br>
+      <strong>Grand Total:</strong> Rp 0
+    </div>
+  </div>
+
+  <script src="./js/sparepart/rekapsemua.js"></script>
+</body>
+</html>

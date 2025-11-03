@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Penukaran Ban</title>
+  <link rel="stylesheet" href="./css/ban/pban.css">
+</head>
+<body>
+  <!-- Back Button -->
+  <a href="index.html" class="btn btn-back">← Kembali ke Menu</a>
+
+  <!-- Vehicle Selection Section -->
+  <h2>Pilih Kendaraan</h2>
+  <div class="form-container">
+    <div class="form-row">
+      <div class="form-group">
+        <label for="kendaraan_input">Kendaraan:</label>
+        <input
+          type="text"
+          id="kendaraan_input"
+          list="kendaraanList"
+          placeholder="Pilih kendaraan..."
+          autocomplete="off"
+        />
+        <datalist id="kendaraanList"></datalist>
+      </div>
+      <div class="form-group" style="min-width: 120px; flex: unset;">
+        <button type="button" id="cariKendaraanBtn" class="btn btn-primary" style="margin-top: 24px;">
+          Cari
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tire Replacement Data Table -->
+  <h2>Data Penukaran Ban</h2>
+  <div class="table-container">
+    <table id="penukaranBanTable">
+      <thead>
+        <tr>
+          <th>No</th>
+          <th>Seri Lama</th>
+          <th>Merk Lama</th>
+          <th>Tanggal Pasang Lama</th>
+          <th>KM Awal</th>
+          <th>KM Akhir</th>
+          <th>Jarak KM</th>
+          <th>KM GPS</th>
+          <th>Keterangan</th>
+          <th>Supir</th>
+          <th>Seri Ban Baru</th>
+          <th>Merk Ban Baru</th>
+          <th>Tanggal Pasang Ban Baru</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- Tire Replacement Form -->
+  <h2 id="formTitle" style="display: none;">Form Ganti Ban</h2>
+  <div class="form-container" id="formContainer" style="display: none;">
+    <form id="gantiBanForm">
+      <!-- Row 1: Old Tire Info and KM -->
+      <div class="form-row">
+        <div class="form-group">
+          <label for="seri_lama">Seri Ban Terpasang :</label>
+          <input type="text" id="seri_lama" readonly />
+        </div>
+        <div class="form-group">
+          <label for="km_awal">KM Awal:</label>
+          <input type="text" id="km_awal" readonly />
+        </div>
+        <div class="form-group">
+          <label for="km_akhir">KM Akhir:</label>
+          <input type="text" id="km_akhir" placeholder="Masukkan KM akhir" required />
+          <div id="km_akhir_preview" class="km-preview"></div>
+        </div>
+        <div class="form-group">
+          <label for="jarak_km">Jarak KM:</label>
+          <input type="text" id="jarak_km" readonly />
+        </div>
+      </div>
+
+      <!-- Row 2: GPS, Driver, and Notes -->
+      <div class="form-row">
+        <div class="form-group">
+          <label for="km_gps">KM GPS:</label>
+          <input type="text" id="km_gps" placeholder="Opsional" />
+          <div id="km_gps_preview" class="km-preview"></div>
+        </div>
+        <div class="form-group">
+          <label for="supir">Supir:</label>
+          <input type="text" id="supir" placeholder="Nama supir" />
+        </div>
+        <div class="form-group" style="flex: 2;">
+          <label for="keterangan">Keterangan:</label>
+          <textarea id="keterangan" rows="2" placeholder="Keterangan tambahan"></textarea>
+        </div>
+      </div>
+
+      <!-- Row 3: New Tire Selection -->
+      <div class="form-row">
+        <div class="form-group" style="flex: 2;">
+          <label for="ban_baru_input">Ban Baru (Stok):</label>
+          <input
+            type="text"
+            id="ban_baru_input"
+            list="banBaruList"
+            placeholder="Pilih ban baru..."
+            required
+          />
+          <datalist id="banBaruList"></datalist>
+        </div>
+        <div class="form-group">
+          <label for="tgl_pasang_ban_baru">Tanggal Pasang Ban Baru:</label>
+          <input type="date" id="tgl_pasang_ban_baru" required />
+        </div>
+      </div>
+
+      <!-- Row 4: Action Buttons -->
+      <div class="form-row">
+        <div class="form-group" style="width: 100%;">
+          <button type="submit" class="btn btn-success" style="width: 100%; margin-bottom: 8px;">
+            Simpan Ganti Ban
+          </button>
+          <button type="button" id="cancelBtn" class="btn btn-cancel" style="width: 100%;">
+            Batal
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <script src="./js/ban/pban.js"></script>
+</body>
+</html>

@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menu Inventory</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #ffffff;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .header p {
+            color: #64748b;
+            font-size: 1rem;
+        }
+
+        .section {
+            margin-bottom: 50px;
+        }
+
+        .section:last-child {
+            margin-bottom: 0;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .section-number {
+            background: #3b82f6;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .section-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 20px;
+            list-style: none;
+        }
+
+        .menu-item {
+            position: relative;
+        }
+
+        .menu-link {
+            display: block;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 24px 20px;
+            text-decoration: none;
+            color: #1e293b;
+            transition: all 0.2s ease;
+            height: 100%;
+        }
+
+        .menu-link:hover {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+            transform: translateY(-2px);
+        }
+
+        .menu-icon {
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+            display: block;
+            text-align: center;
+        }
+
+        .menu-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 6px;
+            color: #1e293b;
+        }
+
+        .menu-description {
+            font-size: 0.9rem;
+            color: #64748b;
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .section-title {
+                font-size: 1.2rem;
+            }
+
+            .menu-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Menu Inventory</h1>
+            <p>Sistem Manajemen Inventory & Logistik</p>
+        </div>
+
+        <!-- Section 1: Master Data -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-number">1</div>
+                <h2 class="section-title">Master Data</h2>
+            </div>
+            <ul class="menu-grid">
+                <li class="menu-item">
+                    <a href="./vendor.html" class="menu-link">
+                        <span class="menu-icon">🏪</span>
+                        <div class="menu-title">Kelola Vendor</div>
+                        <div class="menu-description">Kelola data vendor dan supplier</div>
+                    </a>
+                </li>
+                
+                <li class="menu-item">
+                    <a href="./kendaraan.html" class="menu-link">
+                        <span class="menu-icon">🚛</span>
+                        <div class="menu-title">Kelola Kendaraan</div>
+                        <div class="menu-description">Manajemen armada kendaraan</div>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Section 2: Barang & Laporan -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-number">2</div>
+                <h2 class="section-title">Barang & Laporan (Stok Lama)</h2>
+            </div>
+            <ul class="menu-grid">
+                <li class="menu-item">
+                    <a href="./barang.html" class="menu-link">
+                        <span class="menu-icon">📦</span>
+                        <div class="menu-title">Input Pemakaian Barang</div>
+                        <div class="menu-description">Catat pengeluaran barang</div>
+                    </a>
+                </li>
+                
+                <li class="menu-item">
+                    <a href="./rekap.html" class="menu-link">
+                        <span class="menu-icon">📊</span>
+                        <div class="menu-title">Rekap Laporan</div>
+                        <div class="menu-description">Laporan Pemakaian Barang</div>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Section 3: Manajemen Ban -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-number">3</div>
+                <h2 class="section-title">Manajemen Ban</h2>
+            </div>
+            <ul class="menu-grid">
+                <li class="menu-item">
+                    <a href="./ban.html" class="menu-link">
+                        <span class="menu-icon">🛞</span>
+                        <div class="menu-title">Kelola Stok Ban</div>
+                        <div class="menu-description">Kelola Persediaan Ban Kendaraan</div>
+                    </a>
+                </li>
+                
+                <li class="menu-item">
+                    <a href="./pban.html" class="menu-link">
+                        <span class="menu-icon">🔄</span>
+                        <div class="menu-title">Input Pemakaian Ban</div>
+                        <div class="menu-description">Catat Histori Pemakaian Ban</div>
+                    </a>
+                </li>
+
+                <li class="menu-item">
+                    <a href="./lapban.html" class="menu-link">
+                        <span class="menu-icon">📑</span>
+                        <div class="menu-title">Laporan Ban</div>
+                        <div class="menu-description">Laporan Stok & Pemakaian Ban</div>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Section 4: Sparepart & Rekap -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-number">4</div>
+                <h2 class="section-title">Sparepart & Rekap Lengkap</h2>
+            </div>
+            <ul class="menu-grid">
+                <li class="menu-item">
+                    <a href="./insparepart.html" class="menu-link">
+                        <span class="menu-icon">🔧</span>
+                        <div class="menu-title">Input Sparepart</div>
+                        <div class="menu-description">Input sparepart kendaraan</div>
+                    </a>
+                </li>
+
+                <li class="menu-item">
+                    <a href="./pemakaian.html" class="menu-link">
+                        <span class="menu-icon">📝</span>
+                        <div class="menu-title">Pemakaian Barang</div>
+                        <div class="menu-description">Catat histori pemakaian barang</div>
+                    </a>
+                </li>
+
+                <li class="menu-item">
+                    <a href="./rekapsemua.html" class="menu-link">
+                        <span class="menu-icon">🗂️</span>
+                        <div class="menu-title">Rekap Semua Barang</div>
+                        <div class="menu-description">Laporan seluruh barang & sparepart</div>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <div class="section-number">5</div>
+                <h2 class="section-title">Manajemen Barang Literan</h2>
+            </div>
+            <ul class="menu-grid">
+                <li class="menu-item">
+                    <a href="./inoli.html" class="menu-link">
+                        <span class="menu-icon">🛢️</span>
+                        <div class="menu-title">Barang Literan Masuk</div>
+                        <div class="menu-description">Input data barang literan yang baru masuk</div>
+                    </a>
+                </li>
+
+                <li class="menu-item">
+                    <a href="./pemakaianoli.html" class="menu-link">
+                        <span class="menu-icon">🧾</span>
+                        <div class="menu-title">Pemakaian Barang Literan</div>
+                        <div class="menu-description">Catat pemakaian barang literan kendaraan</div>
+                    </a>
+                </li>
+
+                <li class="menu-item">
+                    <a href="./rekapoli.html" class="menu-link">
+                        <span class="menu-icon">📊</span>
+                        <div class="menu-title">Rekap Barang Literan</div>
+                        <div class="menu-description">Laporan rekap data barang literan</div>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

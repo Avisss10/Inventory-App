@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Input Stok Barang</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f9fafc; padding: 30px; color: #333; }
+    h2, h3 { margin-bottom: 15px; color: #444; }
+    .btn { padding: 8px 18px; background: #4CAF50; border: none; border-radius: 6px; color: white;
+           font-size: 14px; cursor: pointer; transition: 0.2s; text-decoration: none; display: inline-block; }
+    .btn:hover { opacity: 0.9; }
+    .btn-back { background-color: #777; margin-bottom: 24px; }
+    .btn-back:hover { background-color: #555; }
+    .btn-edit { background-color: #2196F3; margin-right: 6px; }
+    .btn-delete { background-color: #f44336; }
+    input, select { padding: 10px; width: 100%; border: 1px solid #ccc; border-radius: 6px;
+                    font-size: 14px; margin-bottom: 10px; box-sizing: border-box; }
+    form { margin-bottom: 30px; }
+    label { font-weight: bold; margin-bottom: 3px; display: block; }
+    .container-flex { display: flex; gap: 32px; align-items: flex-start; max-width: 1200px; margin: 0 auto; }
+    .sidebar { min-width: 270px; max-width: 340px; flex: 1; background: #fff; padding: 28px 20px 22px;
+               border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.07); }
+    .main-content { flex: 3; background: #fff; padding: 28px; border-radius: 10px; 
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.07); }
+    .aksi-container { display: flex; gap: 6px; }
+    table { border-collapse: separate; border-spacing: 0; margin-top: 10px; width: 100%; background: white;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06); border-radius: 10px; overflow: hidden; }
+    th, td { border-bottom: 1px solid #e0e0e0; padding: 13px 14px; text-align: left; font-size: 15px; }
+    th { background: #f2f2f2; font-weight: 600; border-top: 1px solid #e0e0e0; }
+    tr:last-child td { border-bottom: none; }
+    tr:nth-child(even) { background: #fafafa; }
+    tr:hover td { background: #eaf4ff; transition: background 0.2s; }
+    .pagination { margin-top: 18px; display: flex; gap: 7px; flex-wrap: wrap; }
+    .pagination button { padding: 6px 13px; border: 1px solid #ccc; background: #f2f2f2;
+                         border-radius: 4px; cursor: pointer; font-size: 14px; margin-bottom: 4px; }
+    .pagination button.active { background: #2196F3; color: #fff; border-color: #2196F3; }
+    #cancelEditBtn { display: none; margin-left: 8px; }
+    @media (max-width: 900px) {
+      .container-flex { flex-direction: column; }
+      .sidebar, .main-content { max-width: 100%; padding: 18px 8px 12px; }
+      table, th, td { font-size: 13px; }
+    }
+  </style>
+</head>
+<body>
+  <a href="index.html" class="btn btn-back">← Kembali ke Menu</a>
+  <div class="container-flex">
+    <div class="sidebar">
+      <h2>Input Stok Barang</h2>
+      <form id="stokBarangForm">
+        <input type="hidden" id="barang_id">
+        <label for="tgl_masuk">Tanggal Masuk</label>
+        <input type="date" id="tgl_masuk" name="tgl_masuk" required>
+
+        <label for="no_bon">No. Bon</label>
+        <input type="text" id="no_bon" name="no_bon" required>
+
+        <label for="nama_sparepart">Nama Sparepart</label>
+        <input type="text" id="nama_sparepart" name="nama_sparepart" required>
+
+        <label for="jumlah">Jumlah</label>
+        <input type="number" id="jumlah" name="jumlah" min="1" required>
+
+        <label for="harga_satuan">Harga Satuan</label>
+        <input type="number" id="harga_satuan" name="harga_satuan" min="0" step="0.01" required>
+
+        <label>Vendor:</label>
+        <input type="text" id="vendor_input" list="vendorList" required>
+        <datalist id="vendorList"></datalist>
+
+        <button type="submit" class="btn" id="submitBtn">Simpan</button>
+        <button type="button" class="btn btn-back" id="cancelEditBtn">Batal</button>
+      </form>
+      <h3>Cari Barang</h3>
+      <input type="text" placeholder="Ketik nama/no bon sparepart..." id="barang_input" autocomplete="off">
+    </div>
+
+    <div class="main-content">
+      <h3>Daftar Stok Barang</h3>
+      <table id="barangTable">
+        <thead>
+          <tr>
+            <th>No</th>
+            <th>Tanggal Masuk</th>
+            <th>No. Bon</th>
+            <th>Nama Sparepart</th>
+            <th>Jumlah</th>
+            <th>Harga Satuan</th>
+            <th>Total</th>
+            <th>Vendor</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div id="pagination" class="pagination"></div>
+    </div>
+  </div>
+
+<script>
+  const form = document.getElementById("stokBarangForm");
+  const barangTableBody = document.querySelector("#barangTable tbody");
+  const barangIdInput = document.getElementById("barang_id");
+  const tglMasukInput = document.getElementById("tgl_masuk");
+  const noBonInput = document.getElementById("no_bon");
+  const namaSparepartInput = document.getElementById("nama_sparepart");
+  const jumlahInput = document.getElementById("jumlah");
+  const hargaSatuanInput = document.getElementById("harga_satuan");
+  const vendorInput = document.getElementById("vendor_input");
+  const submitBtn = document.getElementById("submitBtn");
+  const cancelEditBtn = document.getElementById("cancelEditBtn");
+  const filterInput = document.getElementById("barang_input");
+
+  let barangData = [];
+  let currentPage = 1;
+  const rowsPerPage = 5;
+
+  // load vendor
+  async function loadVendors() {
+    const res = await fetch("http://localhost:3000/vendor");
+    const data = await res.json();
+    const vendorList = document.getElementById("vendorList");
+    vendorList.innerHTML = '';
+    data.forEach(v => {
+      const option = document.createElement('option');
+      option.value = v.nama_vendor;
+      option.dataset.id = v.id;
+      vendorList.appendChild(option);
+    });
+    window._vendorData = data;
+  }
+
+  // load barang
+  async function loadBarang() {
+    const res = await fetch("http://localhost:3000/gudang");
+    let data = await res.json();
+    if (!Array.isArray(data)) data = [];
+    barangData = data;
+    renderTable();
+    renderPagination();
+  }
+
+  // render tabel
+  function renderTable() {
+    const filter = filterInput.value.toLowerCase();
+    let filteredData = barangData.filter(b =>
+      b.nama_sparepart.toLowerCase().includes(filter) ||
+      b.no_bon.toLowerCase().includes(filter)
+    );
+    const start = (currentPage - 1) * rowsPerPage;
+    const end = start + rowsPerPage;
+    const pageData = filteredData.slice(start, end);
+
+    barangTableBody.innerHTML = '';
+    pageData.forEach((b, index) => {
+      let tgl = b.tgl_masuk ? b.tgl_masuk.substring(0,10).split("-").reverse().join("/") : '';
+      const total = (b.jumlah * b.harga_satuan).toLocaleString('id-ID');
+      const harga = b.harga_satuan ? Number(b.harga_satuan).toLocaleString('id-ID') : 0;
+
+      barangTableBody.innerHTML += `<tr>
+        <td>${start + index + 1}</td>
+        <td>${tgl}</td>
+        <td>${b.no_bon}</td>
+        <td>${b.nama_sparepart}</td>
+        <td>${b.jumlah}</td>
+        <td>${harga}</td>
+        <td>${total}</td>
+        <td>${b.nama_vendor || ''}</td>
+        <td>
+          <div class="aksi-container">
+            <button class="btn btn-edit" onclick="editBarang(${b.id}, '${b.tgl_masuk}', '${b.no_bon}', '${b.nama_sparepart}', ${b.jumlah}, ${b.harga_satuan}, ${b.id_vendor})">Edit</button>
+            <button class="btn btn-delete" onclick="deleteBarang(${b.id})">Delete</button>
+          </div>
+        </td>
+      </tr>`;
+    });
+  }
+
+  // render pagination
+  function renderPagination() {
+    const filter = filterInput.value.toLowerCase();
+    let filteredData = barangData.filter(b =>
+      b.nama_sparepart.toLowerCase().includes(filter) ||
+      b.no_bon.toLowerCase().includes(filter)
+    );
+    const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+    const paginationDiv = document.getElementById('pagination');
+    paginationDiv.innerHTML = '';
+    if (totalPages <= 1) return;
+    for (let i = 1; i <= totalPages; i++) {
+      const btn = document.createElement('button');
+      btn.textContent = i;
+      if (i === currentPage) btn.classList.add('active');
+      btn.onclick = () => { currentPage = i; renderTable(); renderPagination(); };
+      paginationDiv.appendChild(btn);
+    }
+  }
+
+  // submit
+  form.addEventListener("submit", async function(e) {
+    e.preventDefault();
+    const id = barangIdInput.value;
+    const vendorName = vendorInput.value.trim().toLowerCase();
+    const vendorObj = (window._vendorData || []).find(
+      v => v.nama_vendor.trim().toLowerCase() === vendorName
+    );
+    if (!vendorObj) { alert("Vendor tidak valid!"); vendorInput.focus(); return; }
+
+    const data = {
+      tgl_masuk: tglMasukInput.value,
+      no_bon: noBonInput.value,
+      nama_sparepart: namaSparepartInput.value,
+      jumlah: jumlahInput.value,
+      harga_satuan: hargaSatuanInput.value,
+      id_vendor: vendorObj.id
+    };
+
+    let url = "http://localhost:3000/gudang";
+    let method = "POST";
+    if (id) { url += "/" + id; method = "PUT"; }
+
+    const res = await fetch(url, {
+      method, headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+    const result = await res.json();
+    alert(result.message);
+    form.reset();
+    barangIdInput.value = "";
+    submitBtn.textContent = "Simpan";
+    cancelEditBtn.style.display = "none";
+    loadBarang();
+  });
+
+  function editBarang(id, tgl_masuk, no_bon, nama_sparepart, jumlah, harga_satuan, id_vendor) {
+    barangIdInput.value = id;
+    tglMasukInput.value = tgl_masuk.substring(0,10);
+    noBonInput.value = no_bon;
+    namaSparepartInput.value = nama_sparepart;
+    jumlahInput.value = jumlah;
+    hargaSatuanInput.value = harga_satuan;
+    const vendorObj = (window._vendorData || []).find(v => v.id == id_vendor);
+    vendorInput.value = vendorObj ? vendorObj.nama_vendor : '';
+    submitBtn.textContent = "Update";
+    cancelEditBtn.style.display = "inline-block";
+  }
+
+  cancelEditBtn.addEventListener('click', function() {
+    form.reset();
+    barangIdInput.value = "";
+    submitBtn.textContent = "Simpan";
+    cancelEditBtn.style.display = "none";
+  });
+
+  async function deleteBarang(id) {
+    if (!confirm("Yakin ingin menghapus data barang ini?")) return;
+    const res = await fetch(`http://localhost:3000/gudang/${id}`, { method: "DELETE" });
+    const result = await res.json();
+    alert(result.message);
+    loadBarang();
+  }
+
+  filterInput.addEventListener('input', function() {
+    currentPage = 1;
+    renderTable();
+    renderPagination();
+  });
+
+  function init() {
+    loadVendors();
+    loadBarang();
+  }
+  init();
+
+  window.editBarang = editBarang;
+  window.deleteBarang = deleteBarang;
+</script>
+</body>
+</html>

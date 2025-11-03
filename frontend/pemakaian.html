@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pemakaian Sparepart</title>
+  <link rel="stylesheet" href="./css/sparepart/pemakaian.css">
+</head>
+<body>
+  <a href="index.html" class="btn-back">← Kembali ke Menu</a>
+  <h2>Input Pemakaian Barang</h2>
+
+  <div class="form-container">
+    <form id="sparepartForm">
+      <div class="form-row">
+          <div class="form-group half">
+          <label>Pilih Sparepart:</label>
+          <input type="text" id="sparepart_input" list="sparepartList" autocomplete="off" required />
+          <datalist id="sparepartList"></datalist>
+        </div>
+      <!-- Removed Harga input box as per user request -->
+      <!-- <div class="form-group half">
+        <label>Harga:</label>
+        <input type="text" id="harga_sparepart" readonly style="background:#e9ecef; cursor:not-allowed;" />
+      </div> -->
+      </div>
+      <div class="form-row">
+        <div class="form-group half">
+          <label>Jumlah yang Dipakai:</label>
+          <div class="stock-info" id="stokInfo">Stok: -</div>
+          <input type="number" id="jumlah" required min="1" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group half">
+          <label>Satuan:</label>
+        <input type="text" id="satuan" readonly />
+        <!--
+        <select id="satuan" required>
+          <option value="">-- Pilih Satuan --</option>
+        </select>
+        -->
+        </div>
+        <div class="form-group half">
+          <label>Kendaraan:</label>
+          <input type="text" id="kendaraan_input" list="kendaraanList" required />
+          <datalist id="kendaraanList"></datalist>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group half">
+          <label>Penanggung Jawab:</label>
+          <input type="text" id="penanggung_jawab" required />
+        </div>
+        <div class="form-group half">
+          <label>Tanggal Pakai:</label>
+          <input type="date" id="tanggal" required />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group half">
+          <label>&nbsp;</label>
+          <button type="submit">Tambah Ke Review</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <h3>Review Daftar Sparepart</h3>
+  <div class="table-container">
+    <table id="reviewTable">
+      <thead>
+        <tr>
+          <th>No</th><th>Nama Sparepart</th><th>Jumlah</th><th>Satuan</th><th>Kendaraan</th><th>Penanggung Jawab</th><th>Tanggal</th><th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div id="reviewSummary"></div>
+  <button id="finalSave">Simpan Final ke Database</button>
+
+  <script src="./js/sparepart/pemakaian.js"></script>
+</body>
+</html>

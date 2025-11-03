@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rekap Ban</title>
+  <link rel="stylesheet" href="./css/ban/lapban.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+  <!-- Navigation -->
+  <a href="index.html" class="btn-back">← Kembali ke Menu</a>
+
+  <h2>Rekap Data Ban</h2>
+
+  <!-- Filter Section -->
+  <div class="filter-container">
+    <form id="filterForm">
+      <!-- Report Type and Date Filter -->
+      <div class="filter-row">
+        <div class="filter-group">
+          <label>Tipe Laporan:</label>
+          <select id="reportType">
+            <option value="penukaran">Penukaran Ban (Sudah Dipakai)</option>
+            <option value="stok">Stok Ban (Belum Dipakai)</option>
+            <option value="ban_masuk">Ban Masuk</option>
+            <option value="data_kendaraan">Data Kendaraan</option>
+          </select>
+        </div>
+        <div class="filter-group" id="filterTypeGroup">
+          <label>Filter Waktu:</label>
+          <select id="filterType">
+            <option value="hari">Hari Ini</option>
+            <option value="minggu">7 Hari Terakhir</option>
+            <option value="bulan">Bulan Ini</option>
+            <option value="manual">Tanggal Manual</option>
+          </select>
+        </div>
+        <div class="filter-group narrow" id="filterStartGroup" style="display: none;">
+          <label>Dari:</label>
+          <input type="date" id="filterStart">
+        </div>
+        <div class="filter-group narrow" id="filterEndGroup" style="display: none;">
+          <label>Sampai:</label>
+          <input type="date" id="filterEnd">
+        </div>
+      </div>
+      
+      <!-- Filter for Penukaran Report -->
+      <div class="filter-row" id="filterRowPenukaran">
+        <div class="filter-group wide">
+          <label>Vendor:</label>
+          <select id="vendorFilter">
+            <option value="">Semua Vendor</option>
+            <!-- Vendor options will be injected by JS -->
+          </select>
+        </div>
+        <div class="filter-group wide">
+          <label>Kendaraan:</label>
+          <input type="text" id="kendaraanFilter" placeholder="Ketik nama/plat kendaraan..." list="kendaraanFilterList">
+          <datalist id="kendaraanFilterList"></datalist>
+        </div>
+        <div class="button-group">
+          <button type="submit">Terapkan Filter</button>
+          <button type="button" id="resetFilterPenukaran" class="btn-reset">Reset</button>
+        </div>
+      </div>
+
+      <!-- Filter for Stok Report -->
+      <div class="filter-row" id="filterRowStok" style="display: none;">
+        <div class="filter-group wide">
+          <label>Vendor:</label>
+          <select id="vendorFilterStok">
+            <option value="">Semua Vendor</option>
+            <!-- Vendor options will be injected by JS -->
+          </select>
+        </div>
+        <div class="filter-group wide">
+          <label>Merk Ban:</label>
+          <input type="text" id="merkBanFilter" placeholder="Ketik merk ban...">
+        </div>
+        <div class="button-group">
+          <button type="submit">Terapkan Filter</button>
+          <button type="button" id="resetFilterStok" class="btn-reset">Reset</button>
+        </div>
+      </div>
+
+      <!-- Filter for Data Kendaraan Report -->
+      <div class="filter-row" id="filterRowDataKendaraan" style="display: none;">
+        <div class="filter-group wide">
+          <label>Kendaraan:</label>
+          <input type="text" id="kendaraanFilterData" placeholder="Ketik nama/plat kendaraan..." list="kendaraanFilterListData">
+          <datalist id="kendaraanFilterListData"></datalist>
+        </div>
+        <div class="button-group">
+          <button type="submit">Terapkan Filter</button>
+          <button type="button" id="resetFilterDataKendaraan" class="btn-reset">Reset</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- Export Section -->
+  <div class="export-container">
+    <span class="export-label">Export Data:</span>
+    <div class="button-group">
+      <button id="exportExcel" class="btn-export">📊 Export Excel</button>
+      <button id="exportPDF" class="btn-export-pdf">📄 Export PDF</button>
+    </div>
+  </div>
+
+  <!-- Table Section -->
+  <div class="table-container">
+    <table id="rekapTable">
+      <!-- Header for Penukaran Report -->
+      <thead id="tableHeaderPenukaran">
+        <tr>
+          <th>No</th>
+          <th>No Seri (Ban Lama)</th>
+          <th>No Seri (Ban Baru)</th>
+          <th>Merk Ban</th>
+          <th>Jumlah</th>
+          <th>Satuan</th>
+          <th>Harga</th>
+          <th>Vendor</th>
+          <th>Kendaraan</th>
+          <th>Supir</th>
+          <th>Tgl Pasang (Ban Baru)</th>
+          <th>KM Awal</th>
+          <th>KM Akhir</th>
+          <th>Jarak KM</th>
+          <th>KM GPS</th>
+          <th>Keterangan</th>
+        </tr>
+      </thead>
+      
+      <!-- Header for Data Kendaraan Report -->
+      <thead id="tableHeaderDataKendaraan" style="display: none;">
+        <tr>
+          <th>No</th>
+          <th>Kendaraan</th>
+          <th>Supir</th>
+          <th>Tgl Pasang (Ban Lama)</th>
+          <th>Merk (Lama)</th>
+          <th>Seri Ban (Lama)</th>
+          <th>KM Awal</th>
+          <th>KM Akhir</th>
+          <th>Jarak KM</th>
+          <th>KM GPS</th>
+          <th>Keterangan</th>
+          <th>Tgl Pasang (Ban Baru)</th>
+          <th>Merk (Baru)</th>
+          <th>Seri Ban (Baru)</th>
+        </tr>
+      </thead>
+      
+      <!-- Header for Stok Report -->
+      <thead id="tableHeaderStok" style="display: none;">
+        <tr>
+          <th>No</th>
+          <th>Tanggal Ban Masuk</th>
+          <th>Merk Ban</th>
+          <th>No. Seri</th>
+          <th>Jumlah</th>
+          <th>Satuan</th>
+          <th>Harga</th>
+          <th>Vendor</th>
+        </tr>
+      </thead>
+      
+      <tbody>
+        <tr>
+          <td colspan="16" class="loading">Memuat data...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Summary Section -->
+  <div class="summary-container">
+    <div id="summary">
+      <strong>Total Ban:</strong> 0<br>
+      <strong>Grand Total:</strong> Rp 0
+    </div>
+  </div>
+
+  <script src="./js/ban/lapban.js"></script>
+</body>
+</html>

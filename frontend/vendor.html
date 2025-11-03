@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Tambah Vendor</title>
+    <link rel="stylesheet" href="./css/master/vendor.css">
+</head>
+<body>
+    <a href="index.html" class="btn btn-back">← Kembali ke Menu</a>
+    <div class="container-flex">
+        <div class="sidebar">
+            <h2>Tambah Vendor</h2>
+            <form id="vendorForm">
+                <input type="hidden" id="vendor_id">
+                <input type="text" id="nama_vendor" placeholder="Nama Vendor" required>
+                <button type="submit" class="btn" id="submitBtn">Simpan</button>
+                <button type="button" class="btn btn-back" id="cancelEditBtn">Batal</button>
+            </form>
+            <h3>Cari Vendor</h3>
+            <input type="text" placeholder="Ketik nama vendor..." id="vendor_input" autocomplete="off">
+        </div>
+        <div class="main-content">
+            <h3>Daftar Vendor</h3>
+            <table id="vendorTable">
+                <thead>
+                    <tr>
+                        <th>No</th>
+                        <th>Nama Vendor</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Data vendor dari backend akan muncul di sini -->
+                </tbody>
+            </table>
+            <div id="pagination" class="pagination"></div>
+        </div>
+    </div>
+    <script src="./js/master/vendor.js"></script>
+</body>
+</html>

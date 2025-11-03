@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rekap Barang</title>
+  <link rel="stylesheet" href="./css/barang/rekap.css">
+  <!-- SheetJS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- jsPDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+  <a href="index.html" class="btn-back">← Kembali ke Menu</a>
+
+  <h2>Rekap Data Barang</h2>
+
+  <div class="filter-container">
+    <form id="filterForm">
+      <div class="filter-row">
+        <div class="filter-group wide">
+          <label>Nama Barang:</label>
+          <input type="text" id="barangFilter" placeholder="Cari nama barang...">
+          <datalist id="barangList"></datalist>
+        </div>
+        <div class="filter-group">
+          <label>Filter Waktu:</label>
+          <select id="filterType">
+            <option value="hari">Hari Ini</option>
+            <option value="minggu">7 Hari Terakhir</option>
+            <option value="bulan">Bulan Ini</option>
+            <option value="manual">Tanggal Manual</option>
+          </select>
+        </div>
+        <div class="filter-group narrow">
+          <label>Dari:</label>
+          <input type="date" id="filterStart">
+        </div>
+        <div class="filter-group narrow">
+          <label>Sampai:</label>
+          <input type="date" id="filterEnd">
+        </div>
+      </div>
+      
+      <div class="filter-row">
+        <div class="filter-group wide">
+          <label>Vendor:</label>
+          <select id="vendorFilter">
+            <option value="">Semua Vendor</option>
+          </select>
+        </div>
+        <div class="filter-group wide">
+          <label>Kendaraan:</label>
+          <input type="text" id="kendaraanFilter" placeholder="Ketik nama/plat kendaraan..." list="kendaraanFilterList">
+          <datalist id="kendaraanFilterList"></datalist>
+        </div>
+        <div class="button-group">
+          <button type="submit">Terapkan Filter</button>
+          <button type="button" id="resetFilter" class="btn-reset">Reset</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="export-container">
+    <span class="export-label">Export Data:</span>
+    <div class="button-group">
+      <button id="exportExcel" class="btn-export">📊 Export Excel</button>
+      <button id="exportPDF" class="btn-export-pdf">📄 Export PDF</button>
+    </div>
+  </div>
+
+  <div class="table-container">
+    <table id="rekapTable">
+      <thead>
+        <tr>
+          <th>No</th>
+          <th>No Seri</th>
+          <th>Nama Barang</th>
+          <th>Merk</th>
+          <th>Jumlah</th>
+          <th>Satuan</th>
+          <th>Harga Satuan</th>
+          <th>Total</th>
+          <th>Vendor</th>
+          <th>Kendaraan</th>
+          <th>Penanggung Jawab</th>
+          <th>Tanggal</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td colspan="12" class="loading">Memuat data...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="summary-container">
+    <div id="summary">
+      <strong>Total Barang:</strong> 0<br>
+      <strong>Grand Total:</strong> Rp 0
+    </div>
+  </div>
+
+  <script src="./js/barang/rekap.js"></script>
+</body>
+</html>
