@@ -52,6 +52,15 @@
       parseQty: qty => parseFloat((qty || '').toString().replace(',', '.')) || 0,
       
       formatCurrency: val => `Rp ${val.toLocaleString('id-ID')}`,
+
+      formatNumber: val => {
+        const rounded = Math.round(val * 100) / 100;
+        if (rounded % 1 === 0) {
+          return rounded.toLocaleString('id-ID');
+        } else {
+          return rounded.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+      },
       
       formatDate: date => date ? new Date(date).toLocaleDateString('id-ID') : '',
 
@@ -495,7 +504,7 @@
       updateSummary() {
         const summary = this.calculateSummary();
         $('summary').innerHTML = `
-          <strong>Total Literan:</strong> ${summary.totalLiter.toFixed(2)} L<br>
+          <strong>Total Literan:</strong> ${utils.formatNumber(summary.totalLiter)} L<br>
           <strong>Grand Total:</strong> ${utils.formatCurrency(summary.totalCost)}
         `;
       }

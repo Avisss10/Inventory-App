@@ -2459,7 +2459,7 @@ app.get("/rekap/oli_masuk", (req, res) => {
 
 // GET /rekap/oli_tersedia
 // Page: rekapoli.html | JS: js/literan/rekapoli.js
-// Fungsi: Rekap oli tersedia (stok > 0) dengan filter vendor, nama oli
+// Fungsi: Rekap oli tersedia dengan filter vendor, nama oli (termasuk yang stok_tersisa = 0)
 app.get("/rekap/oli_tersedia", (req, res) => {
     const { vendor, nama_oli } = req.query;
 
@@ -2474,7 +2474,7 @@ app.get("/rekap/oli_tersedia", (req, res) => {
       om.total_masuk,
       om.stok_tersisa AS stok_tersisa_om,
       COALESCE(so.total_stok, 0) AS total_stok,
-      om.satuan, 
+      om.satuan,
       om.harga,
       om.id_vendor,
       om.id_oli_lama,
@@ -2482,7 +2482,7 @@ app.get("/rekap/oli_tersedia", (req, res) => {
       v.nama_vendor,
       om_lama.no_seri AS no_seri_lama,
       COALESCE(
-        (SELECT SUM(po.jumlah_pakai) 
+        (SELECT SUM(po.jumlah_pakai)
          FROM pemakaian_oli po
          WHERE po.id_oli_masuk = om.id),
         0
@@ -2491,7 +2491,7 @@ app.get("/rekap/oli_tersedia", (req, res) => {
     LEFT JOIN stok_oli so ON om.id = so.id_oli_masuk
     LEFT JOIN vendor v ON om.id_vendor = v.id
     LEFT JOIN oli_masuk om_lama ON om.id_oli_lama = om_lama.id
-    WHERE COALESCE(so.total_stok, 0) > 0
+    WHERE om.id_oli_baru IS NULL
   `;
 
     const params = [];

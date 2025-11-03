@@ -25,7 +25,12 @@
 
     // ===== FORMAT QUANTITY =====
     function formatQuantity(num) {
-        return parseFloat(num).toFixed(2);
+        const rounded = Math.round(num * 100) / 100;
+        if (rounded % 1 === 0) {
+            return rounded.toLocaleString('id-ID');
+        } else {
+            return rounded.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
     }
 
     // ===== FORMAT CURRENCY =====
@@ -115,9 +120,9 @@
             oldOliList.innerHTML = '';
             oldOliMap = {};
             
-            // Filter oli yang belum digabung ke oli baru lain (id_oli_baru = NULL)
-            const availableOli = data.filter(oli => !oli.id_oli_baru);
-            
+            // Filter oli yang belum digabung ke oli baru lain (id_oli_baru = NULL) dan stok tersisa > 0
+            const availableOli = data.filter(oli => !oli.id_oli_baru && (oli.stok_tersisa || 0) > 0);
+
             availableOli.forEach(oli => {
                 // Format tanggal
                 let tglDisplay = '';
@@ -191,6 +196,8 @@
         const res = await fetch("http://localhost:3000/oli_masuk");
         let data = await res.json();
         if (!Array.isArray(data)) data = [];
+        // Filter data agar hanya menampilkan yang id_oli_baru masih null
+        data = data.filter(oli => !oli.id_oli_baru);
         oliData = data;
         renderTable();
         renderPagination();
