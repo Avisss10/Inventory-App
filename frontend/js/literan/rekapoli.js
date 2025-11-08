@@ -39,7 +39,8 @@
       allData: [],
       currentFilter: {},
       searchTimeout: null,
-      pemakaianTotals: {}
+      pemakaianTotals: {},
+      oliLamaStokMap: {}
     };
 
     // ========================================
@@ -179,14 +180,6 @@
         $$(`.filter-${tipe}`).forEach(el => 
           el.classList.remove('filter-hidden')
         );
-        
-        if (tipe === 'oli_tersedia') {
-          $('filterWaktuGroup').classList.add('filter-hidden');
-          $('filterStartGroup').classList.add('filter-hidden');
-          $('filterEndGroup').classList.add('filter-hidden');
-        } else {
-          $('filterWaktuGroup').classList.remove('filter-hidden');
-        }
       },
 
       updateHeaders(tipe) {
@@ -221,22 +214,33 @@
         let filtered = [...data];
         const namaOli = $('namaOliFilter').value.toLowerCase().trim();
         const vendorId = $('vendorFilter').value;
+        const startDate = state.currentFilter.startDate;
+        const endDate = state.currentFilter.endDate;
 
         if (namaOli) {
-          filtered = filtered.filter(item => 
+          filtered = filtered.filter(item =>
             (item.nama_oli || '').toLowerCase().includes(namaOli)
           );
         }
-        
+
         if (vendorId) {
-          filtered = filtered.filter(item => 
+          filtered = filtered.filter(item =>
             item.id_vendor === parseInt(vendorId)
           );
         }
 
+        if (startDate && endDate) {
+          filtered = filtered.filter(item => {
+            const itemDate = new Date(item.tanggal_masuk);
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            return itemDate >= start && itemDate <= end;
+          });
+        }
+
         state.currentFilter.namaOli = $('namaOliFilter').value || '';
         state.currentFilter.vendor = vendorId;
-        state.currentFilter.vendorNama = vendorId ? 
+        state.currentFilter.vendorNama = vendorId ?
           $('vendorFilter').options[$('vendorFilter').selectedIndex].text : '';
 
         return filtered;
@@ -283,18 +287,33 @@
             url = `/rekap/oli_masuk?${params.toString()}`;
           } 
           else if (tipe === 'oli_tersedia') {
+            const filterType = $('filterType').value;
+            const dateRange = utils.getDateRange(
+              filterType,
+              $('filterStart').value,
+              $('filterEnd').value
+            );
+
+            if (filterType === 'manual' && (!dateRange.start || !dateRange.end)) {
+              alert('Harap isi tanggal untuk filter manual!');
+              return;
+            }
+
             const params = new URLSearchParams();
             const vendorId = $('vendorFilter').value;
             const namaOli = $('namaOliFilter').value || '';
-            
+
             if (vendorId) params.append('vendor', vendorId);
             if (namaOli) params.append('nama_oli', namaOli);
 
             state.currentFilter = {
               vendor: vendorId,
-              vendorNama: vendorId ? 
+              vendorNama: vendorId ?
                 $('vendorFilter').options[$('vendorFilter').selectedIndex].text : '',
               namaOli: namaOli,
+              startDate: dateRange.start,
+              endDate: dateRange.end,
+              filterType: filterType,
               tipe: 'oli_tersedia'
             };
 
@@ -360,9 +379,18 @@
                 totals[namaKey] = (totals[namaKey] || 0) + qty;
               });
               state.pemakaianTotals = totals;
+
+              state.oliLamaStokMap = {};
+              data.forEach(item => {
+                if (item.id) {
+                    const stokTersisa = utils.parseQty(item.total_stok || 0);
+                    state.oliLamaStokMap[item.id] = stokTersisa;
+                  }
+              });
             } catch (err) {
               console.warn('Gagal ambil pemakaian, lanjut tanpa totals:', err);
               state.pemakaianTotals = {};
+              state.oliLamaStokMap = {};
             }
           }
 
@@ -423,7 +451,12 @@
             `;
           },
           oli_tersedia: () => {
-            const sisaLama = utils.parseQty(row.sisa_lama || 0);
+            let sisaLama = utils.parseQty(row.sisa_lama || 0);
+            
+            if (row.id_oli_lama && row.id_oli_lama !== null) {
+              const stokOliLama = state.oliLamaStokMap[row.id_oli_lama] || 0;
+              sisaLama = Math.max(0, sisaLama - stokOliLama);
+            }
             const baruMasuk = utils.parseQty(row.jumlah_baru || row.total_stok || 0);
             const total = sisaLama + baruMasuk;
             const dipakai = utils.parseQty(row.total_dipakai || 0);
@@ -436,7 +469,7 @@
 
             return `
               <td>${idx + 1}</td>
-              <td>${utils.formatDate(row.tanggal || '')}</td>
+              <td>${utils.formatDate(row.tanggal_masuk)}</td>
               <td style="text-align: left;">${row.nama_oli || ''}</td>
               <td>${row.no_seri || '-'}</td>
               <td>${sisaLama.toFixed(2)}</td>
@@ -483,7 +516,12 @@
             totalLiter += jumlah;
             totalCost += jumlah * hargaSatuan;
           } else if (tipe === 'oli_tersedia') {
-            const sisaLama = utils.parseQty(row.sisa_lama || 0);
+            let sisaLama = utils.parseQty(row.sisa_lama || 0);
+            
+            if (row.id_oli_lama && row.id_oli_lama !== null) {
+              const stokOliLama = state.oliLamaStokMap[row.id_oli_lama] || 0;
+              sisaLama = Math.max(0, sisaLama - stokOliLama);
+            }
             const baruMasuk = utils.parseQty(row.jumlah_baru || row.total_stok || 0);
             const total = sisaLama + baruMasuk;
             const dipakai = utils.parseQty(row.total_dipakai || 0);
@@ -515,61 +553,94 @@
     // LOAD INITIAL DATA
     // ========================================
     async function loadInitialData(tipe) {
-      ui.resetSummary();
-      ui.showLoading(tipe);
+          ui.resetSummary();
+          ui.showLoading(tipe);
 
-      try {
-        let url = '';
-        const todayISO = utils.formatDateISO(new Date());
+          try {
+            let url = '';
+            const todayISO = utils.formatDateISO(new Date());
 
-        if (tipe === 'oli_masuk') {
-          const params = new URLSearchParams();
-          params.append('start', todayISO);
-          params.append('end', todayISO);
+            if (tipe === 'oli_masuk') {
+              const params = new URLSearchParams();
+              params.append('start', todayISO);
+              params.append('end', todayISO);
 
-          url = `/rekap/oli_masuk?${params.toString()}`;
-          state.currentFilter = {
-            vendor: '',
-            vendorNama: '',
-            namaOli: '',
-            startDate: todayISO,
-            endDate: todayISO,
-            filterType: 'hari',
-            tipe: 'oli_masuk'
-          };
-        } else if (tipe === 'oli_tersedia') {
-          url = '/rekap/oli_tersedia';
-          state.currentFilter = {
-            vendor: '',
-            vendorNama: '',
-            namaOli: '',
-            tipe: 'oli_tersedia'
-          };
-        } else if (tipe === 'pemakaian_oli') {
-          const params = new URLSearchParams();
-          params.append('start', todayISO);
-          params.append('end', todayISO);
+              url = `/rekap/oli_masuk?${params.toString()}`;
+              state.currentFilter = {
+                vendor: '',
+                vendorNama: '',
+                namaOli: '',
+                startDate: todayISO,
+                endDate: todayISO,
+                filterType: 'hari',
+                tipe: 'oli_masuk'
+              };
+            } else if (tipe === 'oli_tersedia') {
+              // Tampilkan SEMUA data oli tersedia tanpa filter apapun
+              url = '/rekap/oli_tersedia';
+              state.currentFilter = {
+                vendor: '',
+                vendorNama: '',
+                namaOli: '',
+                startDate: '',
+                endDate: '',
+                filterType: 'semua',
+                tipe: 'oli_tersedia'
+              };
+            } else if (tipe === 'pemakaian_oli') {
+              const params = new URLSearchParams();
+              params.append('start', todayISO);
+              params.append('end', todayISO);
 
-          url = `/rekap/pemakaian_oli?${params.toString()}`;
-          state.currentFilter = {
-            kendaraan: '',
-            kendaraanLabel: '',
-            namaOli: '',
-            startDate: todayISO,
-            endDate: todayISO,
-            filterType: 'hari',
-            tipe: 'pemakaian_oli'
-          };
+              url = `/rekap/pemakaian_oli?${params.toString()}`;
+              state.currentFilter = {
+                kendaraan: '',
+                kendaraanLabel: '',
+                namaOli: '',
+                startDate: todayISO,
+                endDate: todayISO,
+                filterType: 'hari',
+                tipe: 'pemakaian_oli'
+              };
+            }
+
+            const data = await api.fetch(url);
+            state.allData = data;
+            
+            // Untuk oli_tersedia, load data pemakaian untuk kalkulasi
+            if (tipe === 'oli_tersedia') {
+              try {
+                const pemakaianList = await api.fetchPemakaian('');
+                const totals = {};
+                (pemakaianList || []).forEach(p => {
+                  const namaRaw = (p.nama_oli || '').toString();
+                  const namaKey = namaRaw.toLowerCase().trim();
+                  const qty = parseFloat((p.jumlah_pakai || 0).toString().replace(',', '.')) || 0;
+                  totals[namaKey] = (totals[namaKey] || 0) + qty;
+                });
+                state.pemakaianTotals = totals;
+
+                // ← TAMBAHKAN INI
+                state.oliLamaStokMap = {};
+                data.forEach(item => {
+                  if (item.id) {
+                    const stokTersisa = utils.parseQty(item.total_stok || 0);
+                    state.oliLamaStokMap[item.id] = stokTersisa;
+                  }
+                });
+
+              } catch (err) {
+                console.warn('Gagal ambil pemakaian, lanjut tanpa totals:', err);
+                state.pemakaianTotals = {};
+                state.oliLamaStokMap = {}; // ← TAMBAHKAN INI JUGA
+              }
+            }
+            dataHandler.renderTable(data);
+          } catch (error) {
+            console.error('Error loading initial data:', error);
+            ui.showEmpty(tipe, 'Terjadi kesalahan saat memuat data: ' + (error.message || error));
+          }
         }
-
-        const data = await api.fetch(url);
-        state.allData = data;
-        dataHandler.renderTable(data);
-      } catch (error) {
-        console.error('Error loading initial data:', error);
-        ui.showEmpty(tipe, 'Terjadi kesalahan saat memuat data: ' + (error.message || error));
-      }
-    }
 
     // ========================================
     // EXPORT FUNCTIONS
@@ -663,8 +734,13 @@
               total,
               row.nama_vendor || '-'
             ]);
-          } else if (tipe === 'oli_tersedia') {
-            const sisaLama = utils.parseQty(row.sisa_lama || 0);
+            } else if (tipe === 'oli_tersedia') {
+              let sisaLama = utils.parseQty(row.sisa_lama || 0);
+              
+              if (row.id_oli_lama && row.id_oli_lama !== null) {
+                const stokOliLama = state.oliLamaStokMap[row.id_oli_lama] || 0;
+                sisaLama = Math.max(0, sisaLama - stokOliLama);
+              }
             const baruMasuk = utils.parseQty(row.jumlah_baru || row.total_stok || 0);
             const total = sisaLama + baruMasuk;
             const dipakai = utils.parseQty(row.total_dipakai || 0);
@@ -676,7 +752,7 @@
 
             wsData.push([
               idx + 1,
-              utils.formatDate(row.tanggal || ''),
+              utils.formatDate(row.tanggal_masuk),
               row.nama_oli,
               row.no_seri || '-',
               sisaLama.toFixed(2),
@@ -782,7 +858,12 @@
               row.nama_vendor || '-'
             ];
           } else if (tipe === 'oli_tersedia') {
-            const sisaLama = utils.parseQty(row.sisa_lama || 0);
+            let sisaLama = utils.parseQty(row.sisa_lama || 0);
+            
+            if (row.id_oli_lama && row.id_oli_lama !== null) {
+              const stokOliLama = state.oliLamaStokMap[row.id_oli_lama] || 0;
+              sisaLama = Math.max(0, sisaLama - stokOliLama);
+            }
             const baruMasuk = utils.parseQty(row.jumlah_baru || row.total_stok || 0);
             const total = sisaLama + baruMasuk;
             const dipakai = utils.parseQty(row.total_dipakai || 0);
@@ -794,7 +875,7 @@
 
             return [
               idx + 1,
-              utils.formatDate(row.tanggal || ''),
+              utils.formatDate(row.tanggal_masuk),
               row.nama_oli || '',
               row.no_seri || '-',
               sisaLama.toFixed(2) + ' L',

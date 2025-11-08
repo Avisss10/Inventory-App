@@ -1,4 +1,4 @@
-    let reviewData = [];
+let reviewData = [];
     let editIndex = -1;
     let sparepartMap = {};
     let sparepartKeyToId = {};
@@ -39,12 +39,13 @@
         hargaMap = {};
 
         allSpareparts.forEach(s => {
-          // asumsikan response memiliki fields: id, nama_sparepart, satuan, jumlah (stok), harga, tgl_sparepart_masuk
+          // asumsikan response memiliki fields: id, nama_sparepart, satuan, jumlah (stok), harga, tgl_sparepart_masuk, no_seri
           const formattedDate = s.tgl_sparepart_masuk ? new Date(s.tgl_sparepart_masuk).toLocaleDateString('id-ID') : '-';
-          const key = `${s.id} - ${formattedDate} - ${s.nama_sparepart}`;
+          // Tambahkan no_seri di sebelah id
+          const key = `${s.id} - ${s.no_seri || '-'} - ${formattedDate} - ${s.nama_sparepart}`;
           let option = document.createElement("option");
           option.value = key;
-          option.textContent = `${s.id} - ${formattedDate} - ${s.nama_sparepart} - Stok: ${s.jumlah} - Rp ${s.harga}`;
+          option.textContent = `${s.id} - ${s.no_seri || '-'} - ${formattedDate} - ${s.nama_sparepart} - Stok: ${s.jumlah} - Rp ${s.harga}`;
           sparepartList.appendChild(option);
 
           sparepartKeyToId[key] = s.id;
@@ -92,17 +93,17 @@
       const keyword = this.value.toLowerCase();
       const filtered = allSpareparts.filter(s => {
         const formattedDate = s.tgl_sparepart_masuk ? new Date(s.tgl_sparepart_masuk).toLocaleDateString('id-ID') : '-';
-        const key = `${s.id} - ${formattedDate} - ${s.nama_sparepart}`;
+        const key = `${s.id} - ${s.no_seri || '-'} - ${formattedDate} - ${s.nama_sparepart}`;
         return key.toLowerCase().includes(keyword);
       });
       const sparepartList = document.getElementById("sparepartList");
       sparepartList.innerHTML = "";
       filtered.forEach(s => {
         const formattedDate = s.tgl_sparepart_masuk ? new Date(s.tgl_sparepart_masuk).toLocaleDateString('id-ID') : '-';
-        const key = `${s.id} - ${formattedDate} - ${s.nama_sparepart}`;
+        const key = `${s.id} - ${s.no_seri || '-'} - ${formattedDate} - ${s.nama_sparepart}`;
         let option = document.createElement("option");
         option.value = key;
-        option.textContent = `${s.id} - ${formattedDate} - ${s.nama_sparepart} - Stok: ${s.jumlah} - Rp ${s.harga}`;
+        option.textContent = `${s.id} - ${s.no_seri || '-'} - ${formattedDate} - ${s.nama_sparepart} - Stok: ${s.jumlah} - Rp ${s.harga}`;
         sparepartList.appendChild(option);
       });
 
@@ -121,8 +122,6 @@
       } else {
         jumlahInput.step = "1";
       }
-      // Removed harga_sparepart input box usage, so no price set here
-      // document.getElementById("harga_sparepart").value = hargaMap[key] !== undefined ? `Rp ${hargaMap[key]}` : "";
 
       const available = getAvailableStock(key, editIndex);
       if (available === null) {
@@ -258,8 +257,6 @@
       document.getElementById("kendaraan_input").value = kendaraanMap[d.kendaraan_id] || "";
       document.getElementById("penanggung_jawab").value = d.penanggung_jawab;
       document.getElementById("tanggal").value = d.tanggal;
-      // Removed harga_sparepart input box usage, so no price set here
-      // document.getElementById("harga_sparepart").value = hargaMap[d.sparepart_key] !== undefined ? `Rp ${hargaMap[d.sparepart_key]}` : "";
 
       const available = getAvailableStock(d.sparepart_key, editIndex);
       const availNonNeg = available === null ? null : Math.max(0, available);

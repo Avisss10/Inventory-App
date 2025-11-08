@@ -2459,9 +2459,9 @@ app.get("/rekap/oli_masuk", (req, res) => {
 
 // GET /rekap/oli_tersedia
 // Page: rekapoli.html | JS: js/literan/rekapoli.js
-// Fungsi: Rekap oli tersedia dengan filter vendor, nama oli (termasuk yang stok_tersisa = 0)
+// Fungsi: Rekap oli tersedia dengan filter vendor, nama oli, tanggal (menampilkan semua data dari stok_oli)
 app.get("/rekap/oli_tersedia", (req, res) => {
-    const { vendor, nama_oli } = req.query;
+    const { vendor, nama_oli, start, end } = req.query;
 
     let sql = `
     SELECT
@@ -2487,14 +2487,25 @@ app.get("/rekap/oli_tersedia", (req, res) => {
          WHERE po.id_oli_masuk = om.id),
         0
       ) as total_dipakai
-    FROM oli_masuk om
-    LEFT JOIN stok_oli so ON om.id = so.id_oli_masuk
+    FROM stok_oli so
+    JOIN oli_masuk om ON so.id_oli_masuk = om.id
     LEFT JOIN vendor v ON om.id_vendor = v.id
     LEFT JOIN oli_masuk om_lama ON om.id_oli_lama = om_lama.id
-    WHERE om.id_oli_baru IS NULL
   `;
 
     const params = [];
+
+    // Filter tanggal
+    if (start && end) {
+        sql += " AND DATE(om.tanggal_masuk) BETWEEN ? AND ?";
+        params.push(start, end);
+    } else if (start) {
+        sql += " AND DATE(om.tanggal_masuk) = ?";
+        params.push(start);
+    } else if (end) {
+        sql += " AND DATE(om.tanggal_masuk) = ?";
+        params.push(end);
+    }
 
     if (vendor) {
         sql += " AND om.id_vendor = ?";
