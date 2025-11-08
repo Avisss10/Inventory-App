@@ -6,12 +6,12 @@
     const CONFIG = {
       columnCounts: {
         oli_masuk: 8,
-        oli_tersedia: 12,
+        oli_tersedia: 13,
         pemakaian_oli: 9
       },
       headers: {
         oli_masuk: ['No', 'Tanggal', 'Nama Literan', 'No Seri', 'Jumlah Masuk (L)', 'Harga Satuan', 'Total', 'Vendor'],
-        oli_tersedia: ['No', 'Nama Literan', 'No Seri', 'Sisa Lama (L)', 'Baru Masuk (L)', 'Total (L)', 'Dipakai (L)', 'Sisa Akhir (L)', 'Harga Satuan', 'Total', 'Status', 'Vendor'],
+        oli_tersedia: ['No', 'Tanggal', 'Nama Literan', 'No Seri', 'Sisa Lama (L)', 'Baru Masuk (L)', 'Total (L)', 'Dipakai (L)', 'Sisa Akhir (L)', 'Harga Satuan', 'Total', 'Status', 'Vendor'],
         pemakaian_oli: ['No', 'Tanggal', 'Nama Literan', 'Kendaraan', 'Jumlah (L)', 'Harga Satuan', 'Total', 'Keterangan', 'Vendor']
       },
       titles: {
@@ -436,6 +436,7 @@
 
             return `
               <td>${idx + 1}</td>
+              <td>${utils.formatDate(row.tanggal || '')}</td>
               <td style="text-align: left;">${row.nama_oli || ''}</td>
               <td>${row.no_seri || '-'}</td>
               <td>${sisaLama.toFixed(2)}</td>
@@ -670,11 +671,12 @@
             const sisaAkhir = total - dipakai;
             const hargaSatuan = utils.parseQty(row.harga || 0);
             const totalHarga = sisaAkhir * hargaSatuan;
-            const status = sisaLama > 0 ? 
+            const status = sisaLama > 0 ?
               `Gabungan dari ${row.no_seri_lama || 'oli lama'}` : 'Oli Baru Murni';
 
             wsData.push([
               idx + 1,
+              utils.formatDate(row.tanggal || ''),
               row.nama_oli,
               row.no_seri || '-',
               sisaLama.toFixed(2),
@@ -725,7 +727,7 @@
 
         const columnWidths = {
           oli_masuk: [5, 15, 25, 15, 15, 18, 18, 30],
-          oli_tersedia: [5, 25, 15, 12, 12, 12, 12, 12, 18, 18, 30, 30],
+          oli_tersedia: [5, 15, 25, 15, 12, 12, 12, 12, 12, 18, 18, 30, 30],
           pemakaian_oli: [5, 15, 25, 20, 15, 18, 18, 30, 30]
         };
         ws['!cols'] = columnWidths[tipe].map(w => ({ wch: w }));
@@ -787,11 +789,12 @@
             const sisaAkhir = total - dipakai;
             const hargaSatuan = utils.parseQty(row.harga || 0);
             const totalHarga = sisaAkhir * hargaSatuan;
-            const status = sisaLama > 0 ? 
+            const status = sisaLama > 0 ?
               `Gabungan dari ${row.no_seri_lama || 'oli lama'}` : 'Oli Baru Murni';
 
             return [
               idx + 1,
+              utils.formatDate(row.tanggal || ''),
               row.nama_oli || '',
               row.no_seri || '-',
               sisaLama.toFixed(2) + ' L',

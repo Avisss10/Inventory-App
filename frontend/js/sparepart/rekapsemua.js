@@ -582,7 +582,7 @@
               total,
               row.nama_vendor || '-',
               row.penanggung_jawab || '-',
-              row.keterangan || '-'
+              (row.nama_sparepart || '').startsWith('Ban ') ? (row.keterangan || '-') : (row.no_seri || '-')
             ]);
           } else if (tipe === 'vendor') {
             wsData.push([
@@ -710,7 +710,7 @@
               utils.formatCurrency(total),
               row.nama_vendor || '-',
               row.penanggung_jawab || '-',
-              row.keterangan || '-'
+              (row.nama_sparepart || '').startsWith('Ban ') ? (row.keterangan || '-') : (row.no_seri || '-')
             ];
           } else if (tipe === 'vendor') {
             return [
