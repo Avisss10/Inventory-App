@@ -1493,110 +1493,128 @@ app.get("/rekap", (req, res) => {
                 sql += " ORDER BY tanggal DESC, id DESC";
             }
 
-        } else if (type === 'vendor') {
-            // barang_masuk, stok_ban, dan oli_masuk
-            sql = `
-        SELECT
-          b.id,
-          b.tgl_sparepart_masuk AS tanggal,
-          b.nama_sparepart,
-          b.no_seri,
-          b.jumlah,
-          b.satuan,
-          b.harga,
-          v.nama_vendor,
-          b.id_vendor
-        FROM barang_masuk b
-        LEFT JOIN vendor v ON b.id_vendor = v.id
-        WHERE 1=1
-      `;
+            // GET /rekap - Update bagian type === 'vendor'
+            // Ganti bagian UNION oli_masuk dengan query ini:
 
-            if (start && end) {
-                sql += " AND DATE(b.tgl_sparepart_masuk) BETWEEN ? AND ?";
-                params.push(start, end);
-            } else if (start) {
-                sql += " AND DATE(b.tgl_sparepart_masuk) = ?";
-                params.push(start);
-            } else if (end) {
-                sql += " AND DATE(b.tgl_sparepart_masuk) = ?";
-                params.push(end);
-            }
+            } else if (type === 'vendor') {
+                // barang_masuk, stok_ban, dan oli_masuk
+                sql = `
+                    SELECT
+                    b.id,
+                    b.tgl_sparepart_masuk AS tanggal,
+                    b.nama_sparepart,
+                    b.no_seri,
+                    b.jumlah,
+                    b.satuan,
+                    b.harga,
+                    v.nama_vendor,
+                    b.id_vendor
+                    FROM barang_masuk b
+                    LEFT JOIN vendor v ON b.id_vendor = v.id
+                    WHERE 1=1
+                `;
 
-            if (vendor) {
-                sql += " AND b.id_vendor = ?";
-                params.push(vendor);
-            }
+                if (start && end) {
+                    sql += " AND DATE(b.tgl_sparepart_masuk) BETWEEN ? AND ?";
+                    params.push(start, end);
+                } else if (start) {
+                    sql += " AND DATE(b.tgl_sparepart_masuk) = ?";
+                    params.push(start);
+                } else if (end) {
+                    sql += " AND DATE(b.tgl_sparepart_masuk) = ?";
+                    params.push(end);
+                }
 
-            // UNION dengan stok_ban
-            sql += `
-        UNION ALL
-        SELECT
-          sb.id,
-          sb.tgl_ban_masuk AS tanggal,
-          CONCAT('Ban ', sb.merk_ban) AS nama_sparepart,
-          sb.no_seri,
-          sb.jumlah,
-          sb.satuan,
-          sb.harga,
-          v.nama_vendor,
-          sb.id_vendor
-        FROM stok_ban sb
-        LEFT JOIN vendor v ON sb.id_vendor = v.id
-        WHERE 1=1
-      `;
+                if (vendor) {
+                    sql += " AND b.id_vendor = ?";
+                    params.push(vendor);
+                }
 
-            if (start && end) {
-                sql += " AND DATE(sb.tgl_ban_masuk) BETWEEN ? AND ?";
-                params.push(start, end);
-            } else if (start) {
-                sql += " AND DATE(sb.tgl_ban_masuk) = ?";
-                params.push(start);
-            } else if (end) {
-                sql += " AND DATE(sb.tgl_ban_masuk) = ?";
-                params.push(end);
-            }
+                if (satuan && satuan !== 'semua') {
+                    sql += " AND b.satuan = ?";
+                    params.push(satuan);
+                }
 
-            if (vendor) {
-                sql += " AND sb.id_vendor = ?";
-                params.push(vendor);
-            }
+                // UNION dengan stok_ban
+                sql += `
+                    UNION ALL
+                    SELECT
+                    sb.id,
+                    sb.tgl_ban_masuk AS tanggal,
+                    CONCAT('Ban ', sb.merk_ban) AS nama_sparepart,
+                    sb.no_seri,
+                    sb.jumlah,
+                    sb.satuan,
+                    sb.harga,
+                    v.nama_vendor,
+                    sb.id_vendor
+                    FROM stok_ban sb
+                    LEFT JOIN vendor v ON sb.id_vendor = v.id
+                    WHERE 1=1
+                `;
 
-            // UNION dengan oli_masuk
-            sql += `
-        UNION ALL
-        SELECT
-          om.id,
-          om.tanggal_masuk AS tanggal,
-          om.nama_oli AS nama_sparepart,
-          om.no_seri,
-          om.total_masuk AS jumlah,
-          om.satuan,
-          om.harga,
-          v.nama_vendor,
-          om.id_vendor
-        FROM oli_masuk om
-        LEFT JOIN vendor v ON om.id_vendor = v.id
-        WHERE 1=1
-      `;
+                if (start && end) {
+                    sql += " AND DATE(sb.tgl_ban_masuk) BETWEEN ? AND ?";
+                    params.push(start, end);
+                } else if (start) {
+                    sql += " AND DATE(sb.tgl_ban_masuk) = ?";
+                    params.push(start);
+                } else if (end) {
+                    sql += " AND DATE(sb.tgl_ban_masuk) = ?";
+                    params.push(end);
+                }
 
-            if (start && end) {
-                sql += " AND DATE(om.tanggal_masuk) BETWEEN ? AND ?";
-                params.push(start, end);
-            } else if (start) {
-                sql += " AND DATE(om.tanggal_masuk) = ?";
-                params.push(start);
-            } else if (end) {
-                sql += " AND DATE(om.tanggal_masuk) = ?";
-                params.push(end);
-            }
+                if (vendor) {
+                    sql += " AND sb.id_vendor = ?";
+                    params.push(vendor);
+                }
 
-            if (vendor) {
-                sql += " AND om.id_vendor = ?";
-                params.push(vendor);
-            }
+                if (satuan && satuan !== 'semua') {
+                    sql += " AND sb.satuan = ?";
+                    params.push(satuan);
+                }
 
-            sql += " ORDER BY tanggal DESC, id DESC";
-        } else {
+                // UNION dengan oli_masuk (FILTER: hanya yang belum tergabung)
+                sql += `
+                    UNION ALL
+                    SELECT
+                    om.id,
+                    om.tanggal_masuk AS tanggal,
+                    om.nama_oli AS nama_sparepart,
+                    om.no_seri,
+                    om.total_masuk AS jumlah,
+                    om.satuan,
+                    om.harga,
+                    v.nama_vendor,
+                    om.id_vendor
+                    FROM oli_masuk om
+                    LEFT JOIN vendor v ON om.id_vendor = v.id
+                    WHERE om.id_oli_lama IS NULL
+                `;
+
+                if (start && end) {
+                    sql += " AND DATE(om.tanggal_masuk) BETWEEN ? AND ?";
+                    params.push(start, end);
+                } else if (start) {
+                    sql += " AND DATE(om.tanggal_masuk) = ?";
+                    params.push(start);
+                } else if (end) {
+                    sql += " AND DATE(om.tanggal_masuk) = ?";
+                    params.push(end);
+                }
+
+                if (vendor) {
+                    sql += " AND om.id_vendor = ?";
+                    params.push(vendor);
+                }
+
+                if (satuan && satuan !== 'semua') {
+                    sql += " AND om.satuan = ?";
+                    params.push(satuan);
+                }
+
+                sql += " ORDER BY tanggal DESC, id DESC";
+            } else {
             // Default: return empty array jika type tidak valid
             return res.json([]);
         }
