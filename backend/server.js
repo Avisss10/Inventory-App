@@ -957,6 +957,50 @@ app.put("/pban/:id", (req, res) => {
     );
 });
 
+// PUT /pban/edit/:id
+// Page: pban.html | JS: js/ban/pban.js
+// Fungsi: Mengupdate data penukaran ban TANPA menyimpan histori (untuk koreksi data)
+app.put("/pban/edit/:id", (req, res) => {
+    const { id } = req.params;
+    const {
+        seri_lama,
+        merk_lama,
+        tanggal_pasang_lama,
+        km_awal,
+        km_akhir,
+        jarak_km,
+        km_gps,
+        keterangan,
+        supir,
+        seri_ban_baru,
+        merk_baru,
+        tgl_pasang_ban_baru
+    } = req.body;
+
+    db.query(
+        `UPDATE penukaran_ban
+         SET seri_lama=?, merk_lama=?, tanggal_pasang_lama=?, km_awal=?, km_akhir=?, 
+             jarak_km=?, km_gps=?, keterangan=?, supir=?, seri_ban_baru=?, 
+             merk_baru=?, tgl_pasang_ban_baru=?
+         WHERE id=?`,
+        [
+            seri_lama, merk_lama, tanggal_pasang_lama, km_awal, km_akhir,
+            jarak_km, km_gps, keterangan, supir, seri_ban_baru,
+            merk_baru, tgl_pasang_ban_baru, id
+        ],
+        (err, result) => {
+            if (err) {
+                console.error("Error /pban/edit/:id PUT:", err);
+                return res.status(500).json({ error: err.sqlMessage || err.message });
+            }
+            if (result.affectedRows === 0) {
+                return res.status(404).json({ message: "Data tidak ditemukan" });
+            }
+            res.json({ message: "Data ban berhasil diperbarui" });
+        }
+    );
+});
+
 // ========================================
 // REKAP ENDPOINTS
 // ========================================

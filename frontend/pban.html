@@ -134,6 +134,91 @@
     </form>
   </div>
 
+  <!-- Edit Form -->
+  <h2 id="editFormTitle" style="display: none;">Edit Data Ban</h2>
+  <div class="form-container" id="editFormContainer" style="display: none;">
+    <form id="editBanForm">
+      <!-- Row 1: Ban Lama Info -->
+      <div class="form-row">
+        <div class="form-group">
+          <label for="edit_seri_lama">Seri Ban Lama:</label>
+          <input type="text" id="edit_seri_lama" placeholder="Seri ban lama" />
+        </div>
+        <div class="form-group">
+          <label for="edit_merk_lama">Merk Ban Lama:</label>
+          <input type="text" id="edit_merk_lama" placeholder="Merk ban lama" />
+        </div>
+        <div class="form-group">
+          <label for="edit_tanggal_pasang_lama">Tanggal Pasang Lama:</label>
+          <input type="date" id="edit_tanggal_pasang_lama" />
+        </div>
+      </div>
+
+      <!-- Row 2: KM Data -->
+      <div class="form-row">
+        <div class="form-group">
+          <label for="edit_km_awal">KM Awal:</label>
+          <input type="text" id="edit_km_awal" placeholder="Masukkan KM awal" />
+          <div id="edit_km_awal_preview" class="km-preview"></div>
+        </div>
+        <div class="form-group">
+          <label for="edit_km_akhir">KM Akhir:</label>
+          <input type="text" id="edit_km_akhir" placeholder="Masukkan KM akhir" />
+          <div id="edit_km_akhir_preview" class="km-preview"></div>
+        </div>
+        <div class="form-group">
+          <label for="edit_jarak_km">Jarak KM:</label>
+          <input type="text" id="edit_jarak_km" readonly />
+        </div>
+        <div class="form-group">
+          <label for="edit_km_gps">KM GPS:</label>
+          <input type="text" id="edit_km_gps" placeholder="Opsional" />
+          <div id="edit_km_gps_preview" class="km-preview"></div>
+        </div>
+      </div>
+
+      <!-- Row 3: Driver and Notes -->
+      <div class="form-row">
+        <div class="form-group">
+          <label for="edit_supir">Supir:</label>
+          <input type="text" id="edit_supir" placeholder="Nama supir" />
+        </div>
+        <div class="form-group" style="flex: 2;">
+          <label for="edit_keterangan">Keterangan:</label>
+          <textarea id="edit_keterangan" rows="2" placeholder="Keterangan tambahan"></textarea>
+        </div>
+      </div>
+
+      <!-- Row 4: Ban Baru Info -->
+      <div class="form-row">
+        <div class="form-group">
+          <label for="edit_seri_ban_baru">Seri Ban Baru:</label>
+          <input type="text" id="edit_seri_ban_baru" placeholder="Seri ban baru" />
+        </div>
+        <div class="form-group">
+          <label for="edit_merk_baru">Merk Ban Baru:</label>
+          <input type="text" id="edit_merk_baru" placeholder="Merk ban baru" />
+        </div>
+        <div class="form-group">
+          <label for="edit_tgl_pasang_ban_baru">Tanggal Pasang Ban Baru:</label>
+          <input type="date" id="edit_tgl_pasang_ban_baru" />
+        </div>
+      </div>
+
+      <!-- Row 5: Action Buttons -->
+      <div class="form-row">
+        <div class="form-group" style="width: 100%;">
+          <button type="submit" class="btn btn-success" style="width: 100%; margin-bottom: 8px;">
+            Simpan Perubahan
+          </button>
+          <button type="button" id="editCancelBtn" class="btn btn-cancel" style="width: 100%;">
+            Batal
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+
   <script src="./js/ban/pban.js"></script>
 </body>
 </html>
