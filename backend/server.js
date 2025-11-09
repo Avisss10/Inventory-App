@@ -703,7 +703,7 @@ app.get("/pemakaian_vendor", (req, res) => {
 
 // GET /ban
 // Page: pban.html | JS: js/ban/pban.js
-// Fungsi: Mengambil ban yang belum terpakai untuk penukaran ban
+// Fungsi: Mengambil ban yang tersedia untuk penukaran ban (tidak sedang dipakai dan belum pernah diganti)
 app.get("/ban", (req, res) => {
     db.query(
         `SELECT b.*, v.nama_vendor
@@ -711,6 +711,9 @@ app.get("/ban", (req, res) => {
      LEFT JOIN vendor v ON b.id_vendor = v.id
      WHERE NOT EXISTS (
        SELECT 1 FROM penukaran_ban pb WHERE pb.id_stok = b.id
+     )
+     AND NOT EXISTS (
+       SELECT 1 FROM histori_ban hb WHERE hb.id_stok = b.id
      )
      ORDER BY b.id DESC`,
         (err, results) => {
