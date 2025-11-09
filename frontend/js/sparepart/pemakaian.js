@@ -311,5 +311,16 @@ let reviewData = [];
     window.editData = editData;
     window.hapusData = hapusData;
 
+    // fungsi untuk konfirmasi kembali ke menu
+    window.confirmBack = function() {
+      if (reviewData.length > 0) {
+        if (confirm('Data review belum disimpan. Apakah Anda yakin ingin kembali ke menu?')) {
+          window.location.href = 'index.html';
+        }
+      } else {
+        window.location.href = 'index.html';
+      }
+    };
+
     // initial load
     loadDatalistData();
