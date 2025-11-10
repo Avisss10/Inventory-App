@@ -1497,18 +1497,20 @@ app.get("/rekap", (req, res) => {
             // Ganti bagian UNION oli_masuk dengan query ini:
 
             } else if (type === 'vendor') {
-                // barang_masuk, stok_ban, dan oli_masuk
+                // UNION: barang_masuk, stok_ban, dan oli_masuk (yang belum digabung)
                 sql = `
                     SELECT
-                    b.id,
-                    b.tgl_sparepart_masuk AS tanggal,
-                    b.nama_sparepart,
-                    b.no_seri,
-                    b.jumlah,
-                    b.satuan,
-                    b.harga,
-                    v.nama_vendor,
-                    b.id_vendor
+                        b.id,
+                        b.tgl_sparepart_masuk AS tanggal,
+                        b.nama_sparepart,
+                        b.no_seri,
+                        b.jumlah,
+                        b.satuan,
+                        b.harga,
+                        (b.jumlah * b.harga) AS total,
+                        v.nama_vendor,
+                        b.id_vendor,
+                        'Sparepart' AS jenis
                     FROM barang_masuk b
                     LEFT JOIN vendor v ON b.id_vendor = v.id
                     WHERE 1=1
@@ -1539,15 +1541,17 @@ app.get("/rekap", (req, res) => {
                 sql += `
                     UNION ALL
                     SELECT
-                    sb.id,
-                    sb.tgl_ban_masuk AS tanggal,
-                    CONCAT('Ban ', sb.merk_ban) AS nama_sparepart,
-                    sb.no_seri,
-                    sb.jumlah,
-                    sb.satuan,
-                    sb.harga,
-                    v.nama_vendor,
-                    sb.id_vendor
+                        sb.id,
+                        sb.tgl_ban_masuk AS tanggal,
+                        CONCAT('Ban ', sb.merk_ban) AS nama_sparepart,
+                        sb.no_seri,
+                        sb.jumlah,
+                        sb.satuan,
+                        sb.harga,
+                        (sb.jumlah * sb.harga) AS total,
+                        v.nama_vendor,
+                        sb.id_vendor,
+                        'Ban' AS jenis
                     FROM stok_ban sb
                     LEFT JOIN vendor v ON sb.id_vendor = v.id
                     WHERE 1=1
@@ -1574,19 +1578,21 @@ app.get("/rekap", (req, res) => {
                     params.push(satuan);
                 }
 
-                // UNION dengan oli_masuk (FILTER: hanya yang belum tergabung)
+                // UNION dengan oli_masuk (HANYA yang belum digabung / id_oli_lama IS NULL)
                 sql += `
                     UNION ALL
                     SELECT
-                    om.id,
-                    om.tanggal_masuk AS tanggal,
-                    om.nama_oli AS nama_sparepart,
-                    om.no_seri,
-                    om.total_masuk AS jumlah,
-                    om.satuan,
-                    om.harga,
-                    v.nama_vendor,
-                    om.id_vendor
+                        om.id,
+                        om.tanggal_masuk AS tanggal,
+                        om.nama_oli AS nama_sparepart,
+                        om.no_seri,
+                        om.total_masuk AS jumlah,
+                        om.satuan,
+                        om.harga,
+                        (om.total_masuk * om.harga) AS total,
+                        v.nama_vendor,
+                        om.id_vendor,
+                        'Oli' AS jenis
                     FROM oli_masuk om
                     LEFT JOIN vendor v ON om.id_vendor = v.id
                     WHERE om.id_oli_lama IS NULL
