@@ -468,16 +468,16 @@ const dataHandler = {
 
       oli_tersedia: () => {
         let sisaLama = utils.parseQty(row.sisa_lama || 0);
-        
+
         if (row.id_oli_lama && row.id_oli_lama !== null) {
           const stokOliLama = state.oliLamaStokMap[row.id_oli_lama] || 0;
           sisaLama = Math.max(0, sisaLama - stokOliLama);
         }
 
-        const baruMasuk = utils.parseQty(row.jumlah_baru || row.total_stok || 0);
+        const baruMasuk = utils.parseQty(row.jumlah_baru || 0);
         const total = sisaLama + baruMasuk;
         const dipakai = utils.parseQty(row.total_dipakai || 0);
-        const sisaAkhir = total - dipakai;
+        const sisaAkhir = row.id_oli_baru && row.id_oli_baru !== null ? 0 : Math.max(0, total - dipakai);
         const hargaSatuan = utils.parseQty(row.harga || 0);
         const totalHarga = sisaAkhir * hargaSatuan;
 
@@ -552,21 +552,21 @@ const dataHandler = {
       } 
       else if (tipe === 'oli_tersedia') {
         let sisaLama = utils.parseQty(row.sisa_lama || 0);
-        
+
         if (row.id_oli_lama && row.id_oli_lama !== null) {
           const stokOliLama = state.oliLamaStokMap[row.id_oli_lama] || 0;
           sisaLama = Math.max(0, sisaLama - stokOliLama);
         }
 
-        const baruMasuk = utils.parseQty(row.jumlah_baru || row.total_stok || 0);
+        const baruMasuk = utils.parseQty(row.jumlah_baru || 0);
         const total = sisaLama + baruMasuk;
         const dipakai = utils.parseQty(row.total_dipakai || 0);
-        const sisaAkhir = total - dipakai;
+        const sisaAkhir = row.id_oli_baru && row.id_oli_baru !== null ? 0 : Math.max(0, total - dipakai);
         const hargaSatuan = utils.parseQty(row.harga || 0);
-        
+
         totalLiter += (sisaLama + baruMasuk);
         totalCost += sisaAkhir * hargaSatuan;
-      } 
+      }
       else if (tipe === 'pemakaian_oli') {
         const jumlah = utils.parseQty(row.jumlah_pakai);
         const hargaSatuan = utils.parseQty(row.harga || 0);
@@ -768,10 +768,10 @@ const exporter = {
           sisaLama = Math.max(0, sisaLama - stokOliLama);
         }
 
-        const baruMasuk = utils.parseQty(row.jumlah_baru || row.total_stok || 0);
+        const baruMasuk = utils.parseQty(row.jumlah_baru || 0);
         const total = sisaLama + baruMasuk;
         const dipakai = utils.parseQty(row.total_dipakai || 0);
-        const sisaAkhir = total - dipakai;
+        const sisaAkhir = row.id_oli_baru && row.id_oli_baru !== null ? 0 : Math.max(0, total - dipakai);
         const hargaSatuan = utils.parseQty(row.harga || 0);
         const totalHarga = sisaAkhir * hargaSatuan;
         const status = sisaLama > 0
@@ -911,10 +911,10 @@ const exporter = {
           sisaLama = Math.max(0, sisaLama - stokOliLama);
         }
 
-        const baruMasuk = utils.parseQty(row.jumlah_baru || row.total_stok || 0);
+        const baruMasuk = utils.parseQty(row.jumlah_baru || 0);
         const total = sisaLama + baruMasuk;
         const dipakai = utils.parseQty(row.total_dipakai || 0);
-        const sisaAkhir = total - dipakai;
+        const sisaAkhir = row.id_oli_baru && row.id_oli_baru !== null ? 0 : Math.max(0, total - dipakai);
         const hargaSatuan = utils.parseQty(row.harga || 0);
         const totalHarga = sisaAkhir * hargaSatuan;
         const status = sisaLama > 0
@@ -926,7 +926,7 @@ const exporter = {
         if (row.id_oli_baru && row.id_oli_baru !== null) {
           const oliBaruData = state.allData.find(item => item.id === row.id_oli_baru);
           const noSeriBaru = oliBaruData ? oliBaruData.no_seri : 'N/A';
-          const literDigabung = utils.parseQty(row.total_stok || 0);
+          const literDigabung = utils.parseQty(oliBaruData ? oliBaruData.sisa_lama || 0 : 0);
           statusDigabungKe = `Digabung ke ${noSeriBaru} (${literDigabung.toFixed(2)} L)`;
         }
 

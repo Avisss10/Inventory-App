@@ -2067,93 +2067,133 @@ app.post("/oli_masuk", (req, res) => {
             return res.status(500).json({ error: err.sqlMessage || err.message });
         }
 
-        // 1. Insert ke oli_masuk
-        db.query(
-            `INSERT INTO oli_masuk 
-        (tanggal_masuk, nama_oli, no_seri, jumlah_baru, sisa_lama, total_masuk, stok_tersisa, satuan, harga, id_vendor, id_oli_lama, keterangan) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [tanggal_masuk, nama_oli, no_seri, jumlahBaruNum, sisaLamaNum, totalMasuk, totalMasuk, satuan, hargaNum, id_vendor, id_oli_lama, keterangan],
-            (err, result) => {
-                if (err) {
-                    return db.rollback(() => {
-                        console.error("Error insert oli_masuk:", err);
-                        res.status(500).json({ error: err.sqlMessage || err.message });
-                    });
-                }
+        // 1. Jika ada oli lama yang digabung, validasi stok tersedia
+        if (id_oli_lama && sisaLamaNum > 0) {
+            db.query(
+                `SELECT total_stok FROM stok_oli WHERE id_oli_masuk = ?`,
+                [id_oli_lama],
+                (errCheck, stokCheck) => {
+                    if (errCheck) {
+                        return db.rollback(() => {
+                            console.error("Error check stok oli lama:", errCheck);
+                            res.status(500).json({ error: errCheck.sqlMessage || errCheck.message });
+                        });
+                    }
 
-                const oliMasukId = result.insertId;
+                    if (!stokCheck || stokCheck.length === 0) {
+                        return db.rollback(() => {
+                            res.status(404).json({ message: "Stok oli lama tidak ditemukan" });
+                        });
+                    }
 
-                // 2. Insert ke stok_oli
-                db.query(
-                    `INSERT INTO stok_oli (id_oli_masuk, total_stok) VALUES (?, ?)`,
-                    [oliMasukId, totalMasuk],
-                    (err2) => {
-                        if (err2) {
-                            return db.rollback(() => {
-                                console.error("Error insert stok_oli:", err2);
-                                res.status(500).json({ error: err2.sqlMessage || err2.message });
+                    const stokTersedia = parseFloat(stokCheck[0].total_stok) || 0;
+                    if (sisaLamaNum > stokTersedia) {
+                        return db.rollback(() => {
+                            res.status(400).json({
+                                message: `Stok oli lama tidak mencukupi. Tersedia: ${stokTersedia}L, Diminta: ${sisaLamaNum}L`
                             });
-                        }
+                        });
+                    }
 
-                        // 3. Jika ada oli lama yang digabung
-                        if (id_oli_lama) {
-                            db.query(
-                                `UPDATE oli_masuk SET id_oli_baru = ? WHERE id = ?`,
-                                [oliMasukId, id_oli_lama],
-                                (err3) => {
-                                    if (err3) {
-                                        return db.rollback(() => {
-                                            console.error("Error update oli_masuk id_oli_baru:", err3);
-                                            res.status(500).json({ error: err3.sqlMessage || err3.message });
-                                        });
-                                    }
+                    // Lanjut ke insert oli baru
+                    insertOliBaru();
+                }
+            );
+        } else {
+            // Tidak ada oli lama, langsung insert
+            insertOliBaru();
+        }
 
-                                    // 4. Update stok oli lama menjadi 0
-                                    db.query(
-                                        `UPDATE stok_oli SET total_stok = 0 WHERE id_oli_masuk = ?`,
-                                        [id_oli_lama],
-                                        (err4) => {
-                                            if (err4) {
-                                                return db.rollback(() => {
-                                                    console.error("Error update stok_oli lama:", err4);
-                                                    res.status(500).json({ error: err4.sqlMessage || err4.message });
-                                                });
-                                            }
+        function insertOliBaru() {
+            // 2. Insert ke oli_masuk
+            db.query(
+                `INSERT INTO oli_masuk 
+            (tanggal_masuk, nama_oli, no_seri, jumlah_baru, sisa_lama, total_masuk, stok_tersisa, satuan, harga, id_vendor, id_oli_lama, keterangan) 
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [tanggal_masuk, nama_oli, no_seri, jumlahBaruNum, sisaLamaNum, totalMasuk, totalMasuk, satuan, hargaNum, id_vendor, id_oli_lama, keterangan],
+                (err, result) => {
+                    if (err) {
+                        return db.rollback(() => {
+                            console.error("Error insert oli_masuk:", err);
+                            res.status(500).json({ error: err.sqlMessage || err.message });
+                        });
+                    }
 
-                                            db.commit((err5) => {
-                                                if (err5) {
-                                                    return db.rollback(() => {
-                                                        console.error("Error commit oli_masuk:", err5);
-                                                        res.status(500).json({ error: err5.sqlMessage || err5.message });
-                                                    });
-                                                }
-                                                res.json({
-                                                    message: "Oli masuk berhasil ditambahkan dan stok diperbarui",
-                                                    id: oliMasukId
-                                                });
+                    const oliMasukId = result.insertId;
+
+                    // 3. Insert ke stok_oli
+                    db.query(
+                        `INSERT INTO stok_oli (id_oli_masuk, total_stok) VALUES (?, ?)`,
+                        [oliMasukId, totalMasuk],
+                        (err2) => {
+                            if (err2) {
+                                return db.rollback(() => {
+                                    console.error("Error insert stok_oli:", err2);
+                                    res.status(500).json({ error: err2.sqlMessage || err2.message });
+                                });
+                            }
+
+                            // 4. Jika ada oli lama yang digabung
+                            if (id_oli_lama && sisaLamaNum > 0) {
+                                // 4a. Update id_oli_baru di oli_masuk lama
+                                db.query(
+                                    `UPDATE oli_masuk SET id_oli_baru = ?, stok_tersisa = stok_tersisa - ? WHERE id = ?`,
+                                    [oliMasukId, sisaLamaNum, id_oli_lama],
+                                    (err3) => {
+                                        if (err3) {
+                                            return db.rollback(() => {
+                                                console.error("Error update oli_masuk id_oli_baru:", err3);
+                                                res.status(500).json({ error: err3.sqlMessage || err3.message });
                                             });
                                         }
-                                    );
-                                }
-                            );
-                        } else {
-                            db.commit((err5) => {
-                                if (err5) {
-                                    return db.rollback(() => {
-                                        console.error("Error commit oli_masuk:", err5);
-                                        res.status(500).json({ error: err5.sqlMessage || err5.message });
+
+                                        // 4b. Kurangi stok oli lama sesuai jumlah yang digabung
+                                        db.query(
+                                            `UPDATE stok_oli SET total_stok = total_stok - ? WHERE id_oli_masuk = ?`,
+                                            [sisaLamaNum, id_oli_lama],
+                                            (err4) => {
+                                                if (err4) {
+                                                    return db.rollback(() => {
+                                                        console.error("Error update stok_oli lama:", err4);
+                                                        res.status(500).json({ error: err4.sqlMessage || err4.message });
+                                                    });
+                                                }
+
+                                                db.commit((err5) => {
+                                                    if (err5) {
+                                                        return db.rollback(() => {
+                                                            console.error("Error commit oli_masuk:", err5);
+                                                            res.status(500).json({ error: err5.sqlMessage || err5.message });
+                                                        });
+                                                    }
+                                                    res.json({
+                                                        message: `Oli masuk berhasil ditambahkan. ${sisaLamaNum}L dari oli lama telah digabungkan dan stok diperbarui`,
+                                                        id: oliMasukId
+                                                    });
+                                                });
+                                            }
+                                        );
+                                    }
+                                );
+                            } else {
+                                db.commit((err5) => {
+                                    if (err5) {
+                                        return db.rollback(() => {
+                                            console.error("Error commit oli_masuk:", err5);
+                                            res.status(500).json({ error: err5.sqlMessage || err5.message });
+                                        });
+                                    }
+                                    res.json({
+                                        message: "Oli masuk berhasil ditambahkan",
+                                        id: oliMasukId
                                     });
-                                }
-                                res.json({
-                                    message: "Oli masuk berhasil ditambahkan",
-                                    id: oliMasukId
                                 });
-                            });
+                            }
                         }
-                    }
-                );
-            }
-        );
+                    );
+                }
+            );
+        }
     });
 });
 
