@@ -2481,12 +2481,12 @@ app.post("/pemakaian_oli", (req, res) => {
 
 // GET /rekap/oli_masuk
 // Page: rekapoli.html | JS: js/literan/rekapoli.js
-// Fungsi: Rekap oli masuk (tanpa gabungan) dengan filter tanggal, vendor, nama oli
+// Fungsi: Rekap oli masuk (tanpa gabungan) dengan filter tanggal, vendor, nama oli, no seri
 app.get("/rekap/oli_masuk", (req, res) => {
-    const { start, end, vendor, nama_oli } = req.query;
+    const { start, end, vendor, nama_oli, no_seri } = req.query;
 
     let sql = `
-    SELECT 
+    SELECT
       om.id,
       om.tanggal_masuk,
       om.nama_oli,
@@ -2517,6 +2517,11 @@ app.get("/rekap/oli_masuk", (req, res) => {
         params.push(`%${nama_oli}%`);
     }
 
+    if (no_seri) {
+        sql += ` AND om.no_seri LIKE ?`;
+        params.push(`%${no_seri}%`);
+    }
+
     sql += ` ORDER BY om.tanggal_masuk DESC, om.id DESC`;
 
     db.query(sql, params, (err, results) => {
@@ -2532,7 +2537,7 @@ app.get("/rekap/oli_masuk", (req, res) => {
 // Page: rekapoli.html | JS: js/literan/rekapoli.js
 // Fungsi: Rekap oli tersedia dengan filter vendor, nama oli, tanggal (menampilkan semua data dari stok_oli)
 app.get("/rekap/oli_tersedia", (req, res) => {
-    const { vendor, nama_oli, start, end } = req.query;
+    const { vendor, nama_oli, start, end, no_seri } = req.query;
 
     let sql = `
     SELECT
@@ -2588,6 +2593,11 @@ app.get("/rekap/oli_tersedia", (req, res) => {
         params.push(`%${nama_oli}%`);
     }
 
+    if (no_seri) {
+        sql += " AND om.no_seri LIKE ?";
+        params.push(`%${no_seri}%`);
+    }
+
     sql += " ORDER BY om.nama_oli, om.no_seri";
 
     db.query(sql, params, (err, results) => {
@@ -2601,12 +2611,12 @@ app.get("/rekap/oli_tersedia", (req, res) => {
 
 // GET /rekap/pemakaian_oli
 // Page: rekapoli.html | JS: js/literan/rekapoli.js
-// Fungsi: Rekap pemakaian oli dengan filter tanggal, kendaraan, nama oli, vendor
+// Fungsi: Rekap pemakaian oli dengan filter tanggal, kendaraan, nama oli, vendor, no seri
 app.get("/rekap/pemakaian_oli", (req, res) => {
-    const { start, end, kendaraan, nama_oli, vendor } = req.query;
+    const { start, end, kendaraan, nama_oli, vendor, no_seri } = req.query;
 
     let sql = `
-    SELECT 
+    SELECT
       po.id,
       po.tanggal_pakai,
       po.jumlah_pakai,
@@ -2644,6 +2654,11 @@ app.get("/rekap/pemakaian_oli", (req, res) => {
     if (vendor) {
         sql += ` AND om.id_vendor = ?`;
         params.push(vendor);
+    }
+
+    if (no_seri) {
+        sql += ` AND om.no_seri LIKE ?`;
+        params.push(`%${no_seri}%`);
     }
 
     sql += ` ORDER BY po.tanggal_pakai DESC, po.id DESC`;

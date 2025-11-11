@@ -223,7 +223,6 @@ const dataHandler = {
 
     let filtered = [...data];
     const namaOli = $('namaOliFilter').value.toLowerCase().trim();
-    const noSeri = $('noSeriFilter').value.toLowerCase().trim();
     const vendorId = $('vendorFilter').value;
     const startDate = state.currentFilter.startDate;
     const endDate = state.currentFilter.endDate;
@@ -231,12 +230,6 @@ const dataHandler = {
     if (namaOli) {
       filtered = filtered.filter(item =>
         (item.nama_oli || '').toLowerCase().includes(namaOli)
-      );
-    }
-
-    if (noSeri) {
-      filtered = filtered.filter(item =>
-        (item.no_seri || '').toLowerCase().includes(noSeri)
       );
     }
 
@@ -254,7 +247,6 @@ const dataHandler = {
     }
 
     state.currentFilter.namaOli = $('namaOliFilter').value || '';
-    state.currentFilter.noSeri = $('noSeriFilter').value || '';
     state.currentFilter.vendor = vendorId;
     state.currentFilter.vendorNama = vendorId
       ? $('vendorFilter').options[$('vendorFilter').selectedIndex].text
@@ -315,9 +307,11 @@ const dataHandler = {
 
         const vendorId = $('vendorFilter').value;
         const namaOli = $('namaOliFilter').value || '';
+        const noSeri = $('noSeriFilter').value || '';
 
         if (vendorId) params.append('vendor', vendorId);
         if (namaOli) params.append('nama_oli', namaOli);
+        if (noSeri) params.append('no_seri', noSeri);
 
         state.currentFilter = {
           vendor: vendorId,
@@ -325,6 +319,7 @@ const dataHandler = {
             ? $('vendorFilter').options[$('vendorFilter').selectedIndex].text
             : '',
           namaOli,
+          noSeri,
           startDate: dateRange.start,
           endDate: dateRange.end,
           filterType,
@@ -1093,7 +1088,7 @@ $('filterType').addEventListener('change', function() {
 });
 
 // Real-time search for oli_tersedia
-['namaOliFilter', 'vendorFilter', 'noSeriFilter'].forEach(id => {
+['namaOliFilter', 'vendorFilter'].forEach(id => {
   $(id).addEventListener('input', function() {
     const tipe = $('tipeLaporan').value;
     if (tipe === 'oli_tersedia') {
