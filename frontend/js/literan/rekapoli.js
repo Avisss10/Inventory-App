@@ -286,9 +286,11 @@ const dataHandler = {
 
         const vendorId = $('vendorFilter').value;
         const namaOli = $('namaOliFilter').value || '';
+        const noSeri = $('noSeriFilter').value || '';
 
         if (vendorId) params.append('vendor', vendorId);
         if (namaOli) params.append('nama_oli', namaOli);
+        if (noSeri) params.append('no_seri', noSeri);
 
         state.currentFilter = {
           vendor: vendorId,
@@ -296,6 +298,7 @@ const dataHandler = {
             ? $('vendorFilter').options[$('vendorFilter').selectedIndex].text
             : '',
           namaOli,
+          noSeri,
           startDate: dateRange.start,
           endDate: dateRange.end,
           filterType,
@@ -342,15 +345,18 @@ const dataHandler = {
         const kendaraanId = state.kendaraanLabelToId[$('kendaraanFilter').value] || '';
         const namaOli = $('namaOliFilter').value || '';
         const vendorId = $('vendorFilter').value;
+        const noSeri = $('noSeriFilter').value || '';
 
         if (kendaraanId) params.append('kendaraan', kendaraanId);
         if (namaOli) params.append('nama_oli', namaOli);
         if (vendorId) params.append('vendor', vendorId);
+        if (noSeri) params.append('no_seri', noSeri);
 
         state.currentFilter = {
           kendaraan: kendaraanId,
           kendaraanLabel: $('kendaraanFilter').value || '',
           namaOli,
+          noSeri,
           vendor: vendorId,
           vendorNama: vendorId
             ? $('vendorFilter').options[$('vendorFilter').selectedIndex].text
