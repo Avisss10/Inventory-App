@@ -415,307 +415,459 @@ async function applyFilterDataKendaraan() {
       const data = await res.json();
       renderTableStok(data);
     }
+// ============================================
+    // EXPORT FUNCTIONS (UPDATED)
+    // ============================================
+    
+    const exportHelper = {
+      // Build filter information for export
+      buildFilterInfo() {
+        const reportType = currentFilter.reportType;
+        const filters = [];
+        
+        if (reportType === 'penukaran') {
+          if (currentFilter.vendorNama) {
+            filters.push(['Vendor', currentFilter.vendorNama]);
+          }
+          if (currentFilter.kendaraanLabel) {
+            filters.push(['Kendaraan', currentFilter.kendaraanLabel]);
+          }
+          if (currentFilter.startDate && currentFilter.endDate) {
+            const filterLabel = getFilterLabel(currentFilter.filterType);
+            filters.push(['Periode', filterLabel]);
+            filters.push(['Tanggal', currentFilter.startDate === currentFilter.endDate 
+              ? currentFilter.startDate 
+              : `${currentFilter.startDate} s/d ${currentFilter.endDate}`]);
+          }
+        } else if (reportType === 'data_kendaraan') {
+          if (currentFilter.kendaraanLabel) {
+            filters.push(['Kendaraan', currentFilter.kendaraanLabel]);
+          }
+        } else if (reportType === 'ban_masuk') {
+          if (currentFilter.vendorNama) {
+            filters.push(['Vendor', currentFilter.vendorNama]);
+          }
+          if (currentFilter.merkBan) {
+            filters.push(['Merk Ban', currentFilter.merkBan]);
+          }
+          if (currentFilter.startDate && currentFilter.endDate) {
+            const filterLabel = getFilterLabel(currentFilter.filterType);
+            filters.push(['Periode', filterLabel]);
+            filters.push(['Tanggal', currentFilter.startDate === currentFilter.endDate 
+              ? currentFilter.startDate 
+              : `${currentFilter.startDate} s/d ${currentFilter.endDate}`]);
+          }
+        } else if (reportType === 'stok') {
+          if (currentFilter.vendorNama) {
+            filters.push(['Vendor', currentFilter.vendorNama]);
+          }
+          if (currentFilter.merkBan) {
+            filters.push(['Merk Ban', currentFilter.merkBan]);
+          }
+        }
+        
+        return filters;
+      },
+      
+      // Generate filename based on filters
+      generateFileName(ext) {
+        const reportType = currentFilter.reportType;
+        const date = new Date().toISOString().split('T')[0];
+        const parts = ['Rekap'];
+        
+        if (reportType === 'penukaran') {
+          parts.push('PenukaranBan');
+          if (currentFilter.kendaraanLabel) {
+            parts.push(currentFilter.kendaraanLabel.replace(/\s+/g, '_').replace(/-/g, '_'));
+          }
+          if (currentFilter.vendorNama) {
+            parts.push(currentFilter.vendorNama.replace(/\s+/g, '_'));
+          }
+          if (currentFilter.startDate && currentFilter.endDate) {
+            parts.push(currentFilter.startDate === currentFilter.endDate 
+              ? currentFilter.startDate 
+              : `${currentFilter.startDate}_sd_${currentFilter.endDate}`);
+          }
+        } else if (reportType === 'data_kendaraan') {
+          parts.push('DataKendaraan');
+          if (currentFilter.kendaraanLabel) {
+            parts.push(currentFilter.kendaraanLabel.replace(/\s+/g, '_').replace(/-/g, '_'));
+          }
+        } else if (reportType === 'ban_masuk') {
+          parts.push('BanMasuk');
+          if (currentFilter.vendorNama) {
+            parts.push(currentFilter.vendorNama.replace(/\s+/g, '_'));
+          }
+          if (currentFilter.merkBan) {
+            parts.push(currentFilter.merkBan.replace(/\s+/g, '_'));
+          }
+          if (currentFilter.startDate && currentFilter.endDate) {
+            parts.push(currentFilter.startDate === currentFilter.endDate 
+              ? currentFilter.startDate 
+              : `${currentFilter.startDate}_sd_${currentFilter.endDate}`);
+          }
+        } else if (reportType === 'stok') {
+          parts.push('StokBan');
+          if (currentFilter.vendorNama) {
+            parts.push(currentFilter.vendorNama.replace(/\s+/g, '_'));
+          }
+          if (currentFilter.merkBan) {
+            parts.push(currentFilter.merkBan.replace(/\s+/g, '_'));
+          }
+        }
+        
+        parts.push(date);
+        return `${parts.join('_')}.${ext}`;
+      }
+    };
+    
+    // Helper function to get filter label
+    function getFilterLabel(filterType) {
+      const labels = {
+        'hari': 'Hari Ini',
+        'minggu': '7 Hari Terakhir',
+        'bulan': 'Bulan Ini',
+        'manual': 'Tanggal Manual'
+      };
+      return labels[filterType] || filterType;
+    }
 
     // ============================================
-    // EXPORT TO EXCEL FUNCTION
+    // EXPORT TO EXCEL FUNCTION (UPDATED)
     // ============================================
     function exportExcel() {
       if (!currentData.length) {
-        alert("Tidak ada data untuk diekspor!");
+        alert('Tidak ada data untuk diekspor!');
         return;
       }
 
-      const wsData = [];
       const reportType = currentFilter.reportType;
-
+      const wsData = [];
+      
+      // Title
+      let title = '';
       if (reportType === 'penukaran') {
-        wsData.push(["Rekap Data Penukaran Ban"]);
-        wsData.push([`Kendaraan: ${currentFilter.kendaraanLabel || "Semua"}`]);
-        wsData.push([`Vendor: ${currentFilter.vendorNama || "Semua"}`]);
-        wsData.push([`Periode: ${currentFilter.startDate} s/d ${currentFilter.endDate}`]);
-        wsData.push([]);
-        wsData.push([
-          "No", "Seri Lama", "Seri Baru", "Merk Ban", "Jml", "Satuan", 
-          "Harga", "Vendor", "Kendaraan", "Supir", "Tgl Pasang", 
-          "KM Awal", "KM Akhir", "Jarak KM", "KM GPS", "Keterangan"
-        ]);
-
-        currentData.forEach((row, index) => {
-          wsData.push([
-            index + 1,
-            row.seri_lama || "-",
-            row.no_seri || "-",
-            row.merk_ban || "-",
-            row.jumlah || "-",
-            row.satuan || "-",
-            parseInt(row.harga || 0),
-            row.nama_vendor || "-",
-            row.kendaraan || "-",
-            row.supir || "-",
-            formatDate(row.tgl_pasang_ban_baru),
-            formatKM(row.km_awal),
-            formatKM(row.km_akhir),
-            formatJarakKM(row.jarak_km),
-            formatKM(row.km_gps),
-            row.keterangan || "-"
-          ]);
-        });
-
-        wsData.push([]);
-        wsData.push([`Total Ban: ${currentFilter.totalBan}`]);
-        wsData.push([`Grand Total: Rp ${currentFilter.grandTotal.toLocaleString("id-ID")}`]);
-
+        title = 'REKAP DATA PENUKARAN BAN';
       } else if (reportType === 'data_kendaraan') {
-        wsData.push(["Rekap Data Kendaraan"]);
-        wsData.push([`Kendaraan: ${currentFilter.kendaraanLabel || "Semua"}`]);
-        wsData.push([]);
+        title = 'REKAP DATA BAN KENDARAAN';
+      } else if (reportType === 'ban_masuk') {
+        title = 'REKAP DATA BAN MASUK';
+      } else {
+        title = 'REKAP DATA STOK BAN (BELUM DIPAKAI)';
+      }
+      
+      wsData.push([title]);
+      wsData.push([`Tanggal Export: ${new Date().toLocaleDateString('id-ID')}`]);
+      wsData.push([]);
+      wsData.push(['FILTER YANG DITERAPKAN:']);
+      
+      // Add filter information
+      exportHelper.buildFilterInfo().forEach(([label, value]) => {
+        wsData.push([`${label}: ${value}`]);
+      });
+      
+      wsData.push([]);
+      
+      // Headers and Data
+      if (reportType === 'penukaran') {
         wsData.push([
-          "No", "Kendaraan", "Supir", "Tgl Pasang (Ban Lama)", "Merk (Lama)", 
-          "Seri Ban (Lama)", "KM Awal", "KM Akhir", "Jarak KM", "KM GPS", 
-          "Keterangan", "Tgl Pasang (Ban Baru)", "Merk (Baru)", "Seri Ban (Baru)"
+          'No', 'Seri Lama', 'Seri Baru', 'Merk Ban', 'Jumlah', 'Satuan', 
+          'Harga', 'Vendor', 'Kendaraan', 'Supir', 'Tgl Pasang', 
+          'KM Awal', 'KM Akhir', 'Jarak KM', 'KM GPS', 'Keterangan'
         ]);
-
-        currentData.forEach((row, index) => {
+        
+        currentData.forEach((row, idx) => {
           wsData.push([
-            index + 1,
-            row.kendaraan || "-",
-            row.supir || "-",
-            formatDate(row.tanggal_pasang_lama),
-            row.merk_lama || "-",
-            row.seri_lama || "-",
-            formatKM(row.km_akhir),
-            formatKM(row.km_awal),
-            formatJarakKM(row.jarak_km),
-            formatKM(row.km_gps),
-            row.keterangan || "-",
+            idx + 1,
+            row.seri_lama || '-',
+            row.no_seri || '-',
+            row.merk_ban || '-',
+            parseInt(row.jumlah) || 0,
+            row.satuan || '-',
+            parseInt(row.harga) || 0,
+            row.nama_vendor || '-',
+            row.kendaraan || '-',
+            row.supir || '-',
             formatDate(row.tgl_pasang_ban_baru),
-            row.merk_baru || "-",
-            row.seri_ban_baru || "-"
+            row.km_awal ? row.km_awal.toString().replace(/\D/g, '') : '-',
+            row.km_akhir ? row.km_akhir.toString().replace(/\D/g, '') : '-',
+            row.jarak_km || '-',
+            row.km_gps ? row.km_gps.toString().replace(/\D/g, '') : '-',
+            row.keterangan || '-'
           ]);
         });
-
-        wsData.push([]);
-        wsData.push([`Total Data: ${currentFilter.totalData}`]);
-
-      } else {
-        const title = reportType === 'ban_masuk' 
-          ? "Rekap Data Ban Masuk" 
-          : "Rekap Data Stok Ban (Belum Dipakai)";
         
-        wsData.push([title]);
-        wsData.push([`Merk Ban: ${currentFilter.merkBan || "Semua"}`]);
-        wsData.push([`Vendor: ${currentFilter.vendorNama || "Semua"}`]);
-        
-        if (reportType === 'ban_masuk') {
-          wsData.push([`Periode: ${currentFilter.startDate} s/d ${currentFilter.endDate}`]);
-        }
-        
-        wsData.push([]);
+      } else if (reportType === 'data_kendaraan') {
         wsData.push([
-          "No", "Tanggal Ban Masuk", "Merk Ban", "No. Seri", 
-          "Jumlah", "Satuan", "Harga", "Vendor"
+          'No', 'Kendaraan', 'Supir', 'Tgl Pasang (Lama)', 'Merk (Lama)', 
+          'Seri Ban (Lama)', 'KM Awal', 'KM Akhir', 'Jarak KM', 'KM GPS', 
+          'Keterangan', 'Tgl Pasang (Baru)', 'Merk (Baru)', 'Seri Ban (Baru)'
         ]);
-
-        currentData.forEach((row, index) => {
+        
+        currentData.forEach((row, idx) => {
+          wsData.push([
+            idx + 1,
+            row.kendaraan || '-',
+            row.supir || '-',
+            formatDate(row.tanggal_pasang_lama),
+            row.merk_lama || '-',
+            row.seri_lama || '-',
+            row.km_akhir ? row.km_akhir.toString().replace(/\D/g, '') : '-',
+            row.km_awal ? row.km_awal.toString().replace(/\D/g, '') : '-',
+            row.jarak_km || '-',
+            row.km_gps ? row.km_gps.toString().replace(/\D/g, '') : '-',
+            row.keterangan || '-',
+            formatDate(row.tgl_pasang_ban_baru),
+            row.merk_baru || '-',
+            row.seri_ban_baru || '-'
+          ]);
+        });
+        
+      } else {
+        wsData.push([
+          'No', 'Tanggal Ban Masuk', 'Merk Ban', 'No. Seri', 
+          'Jumlah', 'Satuan', 'Harga', 'Vendor'
+        ]);
+        
+        currentData.forEach((row, idx) => {
           const jumlah = parseInt(row.jumlah) || 0;
           const harga = parseInt(row.harga) || 0;
           
           wsData.push([
-            index + 1,
+            idx + 1,
             formatDate(row.tgl_ban_masuk),
-            row.merk_ban || "-",
-            row.no_seri || "-",
+            row.merk_ban || '-',
+            row.no_seri || '-',
             jumlah,
-            row.satuan || "Unit",
+            row.satuan || 'Unit',
             harga,
-            row.nama_vendor || "-"
+            row.nama_vendor || '-'
           ]);
         });
-
-        wsData.push([]);
-        wsData.push([`Total Ban: ${currentFilter.totalBan}`]);
-        wsData.push([`Grand Total: Rp ${currentFilter.grandTotal.toLocaleString("id-ID")}`]);
       }
-
+      
+      // Summary (skip for data_kendaraan)
+      if (reportType !== 'data_kendaraan') {
+        wsData.push([]);
+        wsData.push(['RINGKASAN:']);
+        wsData.push([]);
+        wsData.push([`Total Ban: ${currentFilter.totalBan}`, `Grand Total: Rp ${currentFilter.grandTotal.toLocaleString('id-ID')}`]);
+      }
+      
+      // Create workbook
       const ws = XLSX.utils.aoa_to_sheet(wsData);
+      
+      // Column widths
+      ws['!cols'] = [
+        { wch: 5 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 20 },
+        { wch: 10 },
+        { wch: 10 },
+        { wch: 15 },
+        { wch: 20 },
+        { wch: 20 },
+        { wch: 20 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 20 }
+      ];
+      
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Rekap Ban");
-
-      const fileName = generateFileName('xlsx');
-      XLSX.writeFile(wb, fileName);
+      XLSX.utils.book_append_sheet(wb, ws, 'Rekap Ban');
+      XLSX.writeFile(wb, exportHelper.generateFileName('xlsx'));
     }
 
     // ============================================
-    // EXPORT TO PDF FUNCTION
+    // EXPORT TO PDF FUNCTION (UPDATED)
     // ============================================
     function exportPDF() {
       if (!currentData.length) {
-        alert("Tidak ada data untuk diekspor!");
+        alert('Tidak ada data untuk diekspor!');
         return;
       }
 
       const { jsPDF } = window.jspdf;
       const reportType = currentFilter.reportType;
       const orientation = (reportType === 'penukaran' || reportType === 'data_kendaraan') 
-        ? 'landscape' 
-        : 'portrait';
-      const doc = new jsPDF(orientation);
+        ? 'l' 
+        : 'p';
+      const doc = new jsPDF(orientation, 'mm', 'a4');
 
-      // Document Title
+      // Title
       doc.setFontSize(16);
-      let title = "";
+      doc.setFont(undefined, 'normal');
+      let title = '';
       if (reportType === 'penukaran') {
-        title = "Rekap Data Penukaran Ban";
+        title = 'REKAP DATA PENUKARAN BAN';
       } else if (reportType === 'data_kendaraan') {
-        title = "Rekap Data Kendaraan";
+        title = 'REKAP DATA BAN KENDARAAN';
       } else if (reportType === 'ban_masuk') {
-        title = "Rekap Data Ban Masuk";
+        title = 'REKAP DATA BAN MASUK';
       } else {
-        title = "Rekap Data Stok Ban (Belum Dipakai)";
+        title = 'REKAP DATA STOK BAN (BELUM DIPAKAI)';
       }
       doc.text(title, 14, 15);
 
-      // Document Header Info
-      doc.setFontSize(10);
-      let startY = 25;
+      // Export date
+      doc.setFontSize(9);
+      doc.setFont(undefined, 'normal');
+      doc.text(`Tanggal Export: ${new Date().toLocaleDateString('id-ID')}`, 14, 22);
 
-      if (reportType === 'data_kendaraan') {
-        doc.text(`Kendaraan: ${currentFilter.kendaraanLabel || "Semua"}`, 14, startY);
-        startY = 35;
-      } else if (reportType === 'stok') {
-        doc.text(`Vendor: ${currentFilter.vendorNama || "Semua"}`, 14, startY);
-        startY += 6;
-        doc.text(`Merk Ban: ${currentFilter.merkBan || "Semua"}`, 14, startY);
-        startY += 10;
-      } else {
-        doc.text(`Periode: ${currentFilter.startDate} s/d ${currentFilter.endDate}`, 14, startY);
-        startY += 6;
+      // Filter information
+      doc.setFontSize(9);
+      doc.setFont(undefined, 'normal');
+      doc.text('FILTER YANG DITERAPKAN:', 14, 30);
 
-        if (reportType === 'penukaran') {
-          doc.text(`Vendor: ${currentFilter.vendorNama || "Semua"}`, 14, startY);
-          startY += 6;
-          doc.text(`Kendaraan: ${currentFilter.kendaraanLabel || "Semua"}`, 14, startY);
-          startY += 10;
+      let yPos = 35;
+      exportHelper.buildFilterInfo().forEach(([label, value]) => {
+        // For data_kendaraan, make kendaraan filter value bold
+        if (reportType === 'data_kendaraan' && label === 'Kendaraan') {
+          doc.setFont(undefined, 'normal');
+          doc.text(`${label}: `, 14, yPos);
+          const labelWidth = doc.getTextWidth(`${label}: `);
+          doc.setFont(undefined, 'bold');
+          doc.text(value, 14 + labelWidth, yPos);
+          doc.setFont(undefined, 'normal');
         } else {
-          doc.text(`Vendor: ${currentFilter.vendorNama || "Semua"}`, 14, startY);
-          startY += 6;
-          doc.text(`Merk Ban: ${currentFilter.merkBan || "Semua"}`, 14, startY);
-          startY += 10;
+          doc.text(`${label}: ${value}`, 14, yPos);
         }
-      }
+        yPos += 5;
+      });
 
-      // Table Data Preparation
-      let tableData = [];
+      // Table data
       let tableHead = [];
+      let tableData = [];
 
       if (reportType === 'penukaran') {
         tableHead = [[
-          "No", "Seri Lama", "Seri Baru", "Merk Ban", "Jml", "Satuan", 
-          "Harga", "Vendor", "Kendaraan", "Supir", "Tgl Pasang", 
-          "KM Awal", "KM Akhir", "Jarak KM", "KM GPS", "Ket"
+          'No', 'Seri Lama', 'Seri Baru', 'Merk Ban', 'Jml', 'Satuan', 
+          'Harga', 'Vendor', 'Kendaraan', 'Supir', 'Tgl Pasang', 
+          'KM Awal', 'KM Akhir', 'Jarak KM', 'KM GPS', 'Ket'
         ]];
         
-        tableData = currentData.map((row, index) => [
-          index + 1,
-          row.seri_lama || "-",
-          row.no_seri || "-",
-          row.merk_ban || "-",
-          row.jumlah || "-",
-          row.satuan || "-",
+        tableData = currentData.map((row, idx) => [
+          idx + 1,
+          row.seri_lama || '-',
+          row.no_seri || '-',
+          row.merk_ban || '-',
+          row.jumlah || '-',
+          row.satuan || '-',
           formatCurrency(row.harga),
-          row.nama_vendor || "-",
-          row.kendaraan || "-",
-          row.supir || "-",
+          row.nama_vendor || '-',
+          row.kendaraan || '-',
+          row.supir || '-',
           formatDate(row.tgl_pasang_ban_baru),
           formatKM(row.km_awal),
           formatKM(row.km_akhir),
           formatJarakKM(row.jarak_km),
           formatKM(row.km_gps),
-          row.keterangan || "-"
+          row.keterangan || '-'
         ]);
-
-        doc.autoTable({
-          head: tableHead,
-          body: tableData,
-          startY: startY,
-          styles: { fontSize: 6 },
-          columnStyles: {
-            6: { halign: 'right' }
-          }
-        });
-
+        
       } else if (reportType === 'data_kendaraan') {
         tableHead = [[
-          "No", "Kendaraan", "Supir", "Tgl (Lama)", "Merk (Lama)", "Seri (Lama)", 
-          "KM Awal", "KM Akhir", "Jarak", "KM GPS", "Ket", 
-          "Tgl (Baru)", "Merk (Baru)", "Seri (Baru)"
+          'No', 'Kendaraan', 'Supir', 'Tgl (Lama)', 'Merk (Lama)', 'Seri (Lama)', 
+          'KM Awal', 'KM Akhir', 'Jarak', 'KM GPS', 'Ket', 
+          'Tgl (Baru)', 'Merk (Baru)', 'Seri (Baru)'
         ]];
         
-        tableData = currentData.map((row, index) => [
-          index + 1,
-          row.kendaraan || "-",
-          row.supir || "-",
+        tableData = currentData.map((row, idx) => [
+          idx + 1,
+          row.kendaraan || '-',
+          row.supir || '-',
           formatDate(row.tanggal_pasang_lama),
-          row.merk_lama || "-",
-          row.seri_lama || "-",
+          row.merk_lama || '-',
+          row.seri_lama || '-',
           formatKM(row.km_akhir),
           formatKM(row.km_awal),
           formatJarakKM(row.jarak_km),
           formatKM(row.km_gps),
-          row.keterangan || "-",
+          row.keterangan || '-',
           formatDate(row.tgl_pasang_ban_baru),
-          row.merk_baru || "-",
-          row.seri_ban_baru || "-"
+          row.merk_baru || '-',
+          row.seri_ban_baru || '-'
         ]);
-
-        doc.autoTable({
-          head: tableHead,
-          body: tableData,
-          startY: startY,
-          styles: { fontSize: 6 }
-        });
-
+        
       } else {
         tableHead = [[
-          "No", "Tgl Ban Masuk", "Merk Ban", "No. Seri", 
-          "Jumlah", "Satuan", "Harga", "Vendor"
+          'No', 'Tgl Ban Masuk', 'Merk Ban', 'No. Seri', 
+          'Jumlah', 'Satuan', 'Harga', 'Vendor'
         ]];
         
-        tableData = currentData.map((row, index) => [
-          index + 1,
+        tableData = currentData.map((row, idx) => [
+          idx + 1,
           formatDate(row.tgl_ban_masuk),
-          row.merk_ban || "-",
-          row.no_seri || "-",
+          row.merk_ban || '-',
+          row.no_seri || '-',
           parseInt(row.jumlah) || 0,
-          row.satuan || "Unit",
+          row.satuan || 'Unit',
           formatCurrency(row.harga),
-          row.nama_vendor || "-"
+          row.nama_vendor || '-'
         ]);
-
-        doc.autoTable({
-          head: tableHead,
-          body: tableData,
-          startY: startY,
-          styles: { fontSize: 9 },
-          columnStyles: {
-            1: { cellWidth: 30 },
-            2: { cellWidth: 30 },
-            6: { halign: 'right' }
-          }
-        });
       }
 
-      // Summary Footer
-      const finalY = doc.lastAutoTable.finalY + 10;
-      if (reportType === 'data_kendaraan') {
-        doc.text(`Total Data: ${currentFilter.totalData}`, 14, finalY);
-      } else {
-        doc.text(`Total Ban: ${currentFilter.totalBan}`, 14, finalY);
-        doc.text(`Grand Total: ${formatCurrency(currentFilter.grandTotal)}`, 14, finalY + 6);
+      // Generate table
+      doc.autoTable({
+        head: tableHead,
+        body: tableData,
+        startY: yPos + 8,
+        styles: {
+          fontSize: reportType === 'penukaran' || reportType === 'data_kendaraan' ? 8 : 9,
+          cellPadding: 2,
+          overflow: 'linebreak',
+          textColor: 0,
+          fontStyle: 'normal'
+        },
+        headStyles: {
+          fillColor: [52, 58, 64],
+          textColor: 255,
+          fontStyle: 'bold',
+          fontSize: reportType === 'penukaran' || reportType === 'data_kendaraan' ? 7 : 9
+        },
+        alternateRowStyles: {
+          fillColor: [245, 245, 245]
+        },
+        columnStyles: reportType === 'stok' || reportType === 'ban_masuk' ? {
+          1: { cellWidth: 30 },
+          2: { cellWidth: 30 },
+          6: { halign: 'right' }
+        } : (reportType === 'penukaran' ? {
+          6: { halign: 'right' }
+        } : {})
+      });
+
+      // Summary (skip for data_kendaraan)
+      if (reportType !== 'data_kendaraan') {
+        const summaryHeight = 30;
+        let finalY = doc.lastAutoTable.finalY + 15;
+        const pageHeight = orientation === 'l' ? 210 : 297;
+        const bottomMargin = 25;
+        const minSpace = 50;
+        
+        const remainingSpace = pageHeight - bottomMargin - finalY;
+        if (finalY + summaryHeight + bottomMargin > pageHeight || remainingSpace < minSpace) {
+          doc.addPage();
+          finalY = 25;
+        }
+
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'bold');
+        doc.text('RINGKASAN:', 14, finalY);
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(9);
+
+        const summaryY = finalY + 7;
+        doc.text(`Total Ban: ${currentFilter.totalBan}`, 14, summaryY);
+        const rightX = orientation === 'l' ? 200 : 140;
+        doc.text(`Grand Total: Rp ${currentFilter.grandTotal.toLocaleString('id-ID')}`, rightX, summaryY);
       }
 
-      const fileName = generateFileName('pdf');
-      doc.save(fileName);
+      doc.save(exportHelper.generateFileName('pdf'));
     }
 
     // ============================================
