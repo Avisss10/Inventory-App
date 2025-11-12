@@ -67,9 +67,10 @@ const utils = {
 
   formatNumber: val => {
     const rounded = Math.round(val * 100) / 100;
-    return rounded % 1 === 0 
-      ? rounded.toLocaleString('id-ID')
-      : rounded.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (rounded % 1 === 0) {
+      return rounded.toLocaleString('id-ID');
+    }
+    return rounded.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   },
   
   formatDate: date => date ? new Date(date).toLocaleDateString('id-ID') : '',
@@ -1124,8 +1125,12 @@ const exporter = {
         fontSize: 7,
         cellPadding: 2,
         overflow: 'linebreak',
-        valign: 'middle'
+        valign: 'middle',
+        textColor: [0, 0, 0],
+        fillColor: false,           // pastikan background kosong
+        opacity: 1                  // <=== ini kuncinya supaya hitamnya solid!
       },
+
       headStyles: {
         fillColor: [52, 58, 64],
         textColor: 255,
