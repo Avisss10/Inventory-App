@@ -93,8 +93,17 @@
     // FORMATTING FUNCTIONS
     // ============================================
     function formatDate(dateString) {
-      if (!dateString || dateString === '0000-00-00') return '-';
-      return new Date(dateString).toLocaleDateString("id-ID");
+      if (!dateString || dateString === '0000-00-00' || dateString === '') return '-';
+      try {
+        const raw = dateString.substring(0, 10); // YYYY-MM-DD
+        const [year, month, day] = raw.split("-");
+        const monthNames = ['JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGU', 'SEP', 'OKT', 'NOV', 'DES'];
+        const monthIndex = parseInt(month) - 1;
+        const monthName = monthNames[monthIndex] || month;
+        return `${day}-${monthName}-${year}`;
+      } catch (e) {
+        return '-';
+      }
     }
 
     function formatKM(km) {

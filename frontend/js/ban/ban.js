@@ -40,6 +40,21 @@
         renderPagination();
     }
 
+    // ===== FORMAT TANGGAL =====
+    function formatTanggal(dateString) {
+        if (!dateString || dateString === '0000-00-00' || dateString === '') return 'N/A';
+        try {
+            const raw = dateString.substring(0, 10); // YYYY-MM-DD
+            const [year, month, day] = raw.split("-");
+            const monthNames = ['JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGU', 'SEP', 'OKT', 'NOV', 'DES'];
+            const monthIndex = parseInt(month) - 1;
+            const monthName = monthNames[monthIndex] || month;
+            return `${day}-${monthName}-${year}`;
+        } catch (e) {
+            return 'N/A';
+        }
+    }
+
     // ===== RENDER TABEL =====
     function renderTable() {
         const filter = filterInput.value.toLowerCase();
@@ -54,17 +69,12 @@
 
         banTableBody.innerHTML = '';
         pageData.forEach((ban, index) => {
-            let tgl = '';
-            if (ban.tgl_ban_masuk) {
-                const raw = ban.tgl_ban_masuk.substring(0, 10); // YYYY-MM-DD
-                const [year, month, day] = raw.split("-");
-                tgl = `${day}/${month}/${year}`;
-            }
+            const tgl = formatTanggal(ban.tgl_ban_masuk);
             const harga = ban.harga ? Number(ban.harga).toLocaleString('id-ID') : 'N/A';
 
             banTableBody.innerHTML += `<tr>
                 <td style="text-align:center;">${start + index + 1}</td>
-                <td>${tgl || 'N/A'}</td>
+                <td>${tgl}</td>
                 <td>${ban.merk_ban || 'N/A'}</td>
                 <td>${ban.no_seri || 'N/A'}</td>
                 <td style="text-align:right;">${harga}</td>

@@ -35,6 +35,11 @@
 
   <!-- Tire Replacement Data Table -->
   <h2>Data Penukaran Ban</h2>
+  <div id="tambahBanContainer" style="margin-bottom: 20px; display: none;">
+    <button type="button" id="tambahBanBtn" class="btn btn-success">
+      + Tambah Data Ban
+    </button>
+  </div>
   <div class="table-container">
     <table id="penukaranBanTable">
       <thead>
@@ -57,6 +62,96 @@
       </thead>
       <tbody></tbody>
     </table>
+  </div>
+
+  <!-- Tambah Ban Form -->
+  <h2 id="tambahBanFormTitle" style="display: none;">Tambah Data Ban</h2>
+  <div class="form-container" id="tambahBanFormContainer" style="display: none;">
+    <form id="tambahBanForm">
+      <!-- Row 1: Ban Lama Info -->
+      <div class="form-row">
+        <div class="form-group">
+          <label for="tambah_seri_lama">Seri Ban Lama:</label>
+          <input type="text" id="tambah_seri_lama" placeholder="Seri ban lama" />
+        </div>
+        <div class="form-group">
+          <label for="tambah_merk_lama">Merk Ban Lama:</label>
+          <input type="text" id="tambah_merk_lama" placeholder="Merk ban lama" />
+        </div>
+        <div class="form-group">
+          <label for="tambah_tanggal_pasang_lama">Tanggal Pasang Lama:</label>
+          <input type="date" id="tambah_tanggal_pasang_lama" />
+        </div>
+      </div>
+
+      <!-- Row 2: KM Data -->
+      <div class="form-row">
+        <div class="form-group">
+          <label for="tambah_km_awal">KM Awal:</label>
+          <input type="text" id="tambah_km_awal" placeholder="Masukkan KM awal" />
+          <div id="tambah_km_awal_preview" class="km-preview"></div>
+        </div>
+        <div class="form-group">
+          <label for="tambah_km_akhir">KM Akhir:</label>
+          <input type="text" id="tambah_km_akhir" placeholder="Masukkan KM akhir" />
+          <div id="tambah_km_akhir_preview" class="km-preview"></div>
+        </div>
+        <div class="form-group">
+          <label for="tambah_jarak_km">Jarak KM:</label>
+          <input type="text" id="tambah_jarak_km" readonly />
+        </div>
+        <div class="form-group">
+          <label for="tambah_km_gps">KM GPS:</label>
+          <input type="text" id="tambah_km_gps" placeholder="Opsional" />
+          <div id="tambah_km_gps_preview" class="km-preview"></div>
+        </div>
+      </div>
+
+      <!-- Row 3: Driver and Notes -->
+      <div class="form-row">
+        <div class="form-group">
+          <label for="tambah_supir">Supir:</label>
+          <input type="text" id="tambah_supir" placeholder="Nama supir" />
+        </div>
+        <div class="form-group" style="flex: 2;">
+          <label for="tambah_keterangan">Keterangan:</label>
+          <textarea id="tambah_keterangan" rows="2" placeholder="Keterangan tambahan"></textarea>
+        </div>
+      </div>
+
+      <!-- Row 4: Ban Baru Info -->
+      <div class="form-row">
+        <div class="form-group" style="flex: 2;">
+          <label for="tambah_ban_baru_input">Ban Baru (Stok):</label>
+          <input
+            type="text"
+            id="tambah_ban_baru_input"
+            list="tambahBanBaruList"
+            placeholder="Pilih ban baru..."
+          />
+          <datalist id="tambahBanBaruList"></datalist>
+        </div>
+        <div class="form-group">
+          <label for="tambah_tgl_pasang_ban_baru">Tanggal Pasang Ban Baru:</label>
+          <input type="date" id="tambah_tgl_pasang_ban_baru" />
+        </div>
+      </div>
+
+      <!-- Hidden field for kendaraan_id -->
+      <input type="hidden" id="tambah_ban_kendaraan_id" />
+
+      <!-- Row 5: Action Buttons -->
+      <div class="form-row">
+        <div class="form-group" style="width: 100%;">
+          <button type="submit" class="btn btn-success" style="width: 100%; margin-bottom: 8px;">
+            Simpan Data Ban
+          </button>
+          <button type="button" id="tambahBanCancelBtn" class="btn btn-cancel" style="width: 100%;">
+            Batal
+          </button>
+        </div>
+      </div>
+    </form>
   </div>
 
   <!-- Tire Replacement Form -->
@@ -93,7 +188,7 @@
         </div>
         <div class="form-group">
           <label for="supir">Supir:</label>
-          <input type="text" id="supir" placeholder="Nama supir" />
+          <input type="text" id="supir" placeholder="Nama supir" required />
         </div>
         <div class="form-group" style="flex: 2;">
           <label for="keterangan">Keterangan:</label>

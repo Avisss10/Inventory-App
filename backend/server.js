@@ -882,6 +882,75 @@ app.get("/pban/all", (req, res) => {
     );
 });
 
+// POST /pban
+// Page: pban.html | JS: js/ban/pban.js
+// Fungsi: Menambahkan data penukaran ban baru ke tabel penukaran_ban (semua field boleh null)
+app.post("/pban", (req, res) => {
+    const {
+        id_kendaraan,
+        supir,
+        tanggal_pasang_lama,
+        merk_lama,
+        seri_lama,
+        km_awal,
+        km_akhir,
+        jarak_km,
+        km_gps,
+        keterangan,
+        tgl_pasang_ban_baru,
+        merk_baru,
+        seri_ban_baru,
+        id_stok
+    } = req.body;
+
+    // Konversi nilai numerik jika ada, jika tidak null
+    const kmAwalNum = km_awal !== null && km_awal !== undefined ? parseFloat(km_awal) : null;
+    const kmAkhirNum = km_akhir !== null && km_akhir !== undefined ? parseFloat(km_akhir) : null;
+    const jarakKmNum = jarak_km !== null && jarak_km !== undefined ? parseFloat(jarak_km) : null;
+    const kmGpsNum = km_gps !== null && km_gps !== undefined ? parseFloat(km_gps) : null;
+
+    // Handle field yang tidak boleh null di database dengan default value
+    // Jika kolom di database NOT NULL, gunakan empty string sebagai default untuk string fields
+    const supirValue = supir !== null && supir !== undefined && supir !== '' ? supir : '';
+    const seriLamaValue = seri_lama !== null && seri_lama !== undefined && seri_lama !== '' ? seri_lama : '';
+    // Untuk date field yang NOT NULL, gunakan tanggal saat ini jika null
+    const tglPasangBanBaruValue = tgl_pasang_ban_baru !== null && tgl_pasang_ban_baru !== undefined && tgl_pasang_ban_baru !== '' 
+        ? tgl_pasang_ban_baru 
+        : new Date().toISOString().split('T')[0]; // Format YYYY-MM-DD
+
+    db.query(
+        `INSERT INTO penukaran_ban 
+        (id_kendaraan, supir, tanggal_pasang_lama, merk_lama, seri_lama, km_awal, km_akhir, jarak_km, km_gps, keterangan, tgl_pasang_ban_baru, merk_baru, seri_ban_baru, id_stok) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+            id_kendaraan || null,
+            supirValue,
+            tanggal_pasang_lama || null,
+            merk_lama || null,
+            seriLamaValue,
+            kmAwalNum,
+            kmAkhirNum,
+            jarakKmNum,
+            kmGpsNum,
+            keterangan || null,
+            tglPasangBanBaruValue,
+            merk_baru || null,
+            seri_ban_baru || null,
+            id_stok || null
+        ],
+        (err, result) => {
+            if (err) {
+                console.error("Error /pban POST:", err);
+                return res.status(500).json({ error: err.sqlMessage || err.message });
+            }
+            res.status(201).json({
+                message: "Data penukaran ban berhasil ditambahkan",
+                id: result.insertId
+            });
+        }
+    );
+});
+
 // PUT /pban/:id
 // Page: pban.html | JS: js/ban/pban.js
 // Fungsi: Mengupdate data penukaran ban dan menyimpan histori perubahan ke tabel histori_ban
