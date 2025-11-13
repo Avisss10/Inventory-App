@@ -15,11 +15,13 @@
       try {
         const res = await fetch("http://localhost:3000/vendor");
         const vendors = await res.json();
-        // Ganti isi vendorFilter dan vendorFilterStok menjadi dropdown
+        // Ganti isi vendorFilter, vendorFilterStok, dan vendorFilterPemakaianPerMasuk menjadi dropdown
         const vendorSelect1 = document.getElementById("vendorFilter");
         const vendorSelect2 = document.getElementById("vendorFilterStok");
+        const vendorSelect3 = document.getElementById("vendorFilterPemakaianPerMasuk");
         vendorSelect1.innerHTML = '<option value="">Semua Vendor</option>';
         vendorSelect2.innerHTML = '<option value="">Semua Vendor</option>';
+        vendorSelect3.innerHTML = '<option value="">Semua Vendor</option>';
         vendors.forEach(v => {
           const option1 = document.createElement("option");
           option1.value = v.id;
@@ -30,6 +32,11 @@
           option2.value = v.id;
           option2.textContent = v.nama_vendor;
           vendorSelect2.appendChild(option2);
+
+          const option3 = document.createElement("option");
+          option3.value = v.id;
+          option3.textContent = v.nama_vendor;
+          vendorSelect3.appendChild(option3);
 
           vendorNameToId[v.nama_vendor] = v.id;
           vendorMap[v.id] = v.nama_vendor;
@@ -74,6 +81,7 @@
     function getColSpan(reportType) {
       if (reportType === 'stok' || reportType === 'ban_masuk') return 8;
       if (reportType === 'data_kendaraan') return 14;
+      if (reportType === 'pemakaian_per_masuk') return 9;
       return 16;
     }
 
@@ -301,6 +309,53 @@
       currentFilter.grandTotal = grandTotal;
     }
 
+    function renderTablePemakaianPerMasuk(data) {
+      currentData = data;
+      const tbody = document.querySelector("#rekapTable tbody");
+      tbody.innerHTML = "";
+      
+      let totalBan = 0;
+      let grandTotal = 0;
+
+      if (data.length === 0) {
+        showEmpty('pemakaian_per_masuk');
+        document.getElementById("summary").innerHTML = `
+          <strong>Total Ban:</strong> 0<br>
+          <strong>Grand Total:</strong> Rp 0
+        `;
+        return;
+      }
+
+      data.forEach((row, index) => {
+        const harga = parseInt(row.harga) || 0;
+        
+        totalBan += 1;
+        grandTotal += harga;
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${index + 1}</td>
+          <td>${formatDate(row.tgl_ban_masuk)}</td>
+          <td style="text-align: left;">${row.merk_ban || '-'}</td>
+          <td>${row.no_seri || '-'}</td>
+          <td style="text-align: right;">${formatCurrency(harga)}</td>
+          <td style="text-align: left;">${row.nama_vendor || '-'}</td>
+          <td style="text-align: left;">${row.kendaraan || '-'}</td>
+          <td>${formatDate(row.tanggal_pemakaian)}</td>
+          <td>${row.keterangan || '-'}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById("summary").innerHTML = `
+        <strong>Total Ban:</strong> ${totalBan}<br>
+        <strong>Grand Total:</strong> ${formatCurrency(grandTotal)}
+      `;
+      
+      currentFilter.totalBan = totalBan;
+      currentFilter.grandTotal = grandTotal;
+    }
+
     // ============================================
     // FILTER APPLICATION FUNCTIONS
     // ============================================
@@ -313,6 +368,8 @@
           await applyFilterPenukaran();
         } else if (reportType === 'data_kendaraan') {
           await applyFilterDataKendaraan();
+        } else if (reportType === 'pemakaian_per_masuk') {
+          await applyFilterPemakaianPerMasuk();
         } else {
           await applyFilterStok(reportType);
         }
@@ -424,6 +481,37 @@ async function applyFilterDataKendaraan() {
       const data = await res.json();
       renderTableStok(data);
     }
+
+    async function applyFilterPemakaianPerMasuk() {
+      const filterType = document.getElementById("filterType").value;
+      let startDate = document.getElementById("filterStart").value;
+      let endDate = document.getElementById("filterEnd").value;
+
+      if (filterType === 'manual' && (!startDate || !endDate)) {
+        alert("Harap isi tanggal mulai dan selesai untuk filter manual!");
+        showEmpty('pemakaian_per_masuk', "Silakan isi tanggal terlebih dahulu");
+        return;
+      }
+
+      const dateRange = getDateRange(filterType, startDate, endDate);
+      startDate = dateRange.startDate;
+      endDate = dateRange.endDate;
+
+      const vendorId = document.getElementById("vendorFilterPemakaianPerMasuk").value;
+
+      currentFilter = {
+        startDate,
+        endDate,
+        vendor: vendorId,
+        filterType,
+        vendorNama: vendorMap[vendorId] || "",
+        reportType: 'pemakaian_per_masuk'
+      };
+
+      const res = await fetch(`http://localhost:3000/pemakaian_ban_per_masuk?start=${startDate}&end=${endDate}&vendor=${vendorId}`);
+      const data = await res.json();
+      renderTablePemakaianPerMasuk(data);
+    }
 // ============================================
     // EXPORT FUNCTIONS (UPDATED)
     // ============================================
@@ -472,6 +560,17 @@ async function applyFilterDataKendaraan() {
           }
           if (currentFilter.merkBan) {
             filters.push(['Merk Ban', currentFilter.merkBan]);
+          }
+        } else if (reportType === 'pemakaian_per_masuk') {
+          if (currentFilter.vendorNama) {
+            filters.push(['Vendor', currentFilter.vendorNama]);
+          }
+          if (currentFilter.startDate && currentFilter.endDate) {
+            const filterLabel = getFilterLabel(currentFilter.filterType);
+            filters.push(['Periode', filterLabel]);
+            filters.push(['Tanggal', currentFilter.startDate === currentFilter.endDate 
+              ? currentFilter.startDate 
+              : `${currentFilter.startDate} s/d ${currentFilter.endDate}`]);
           }
         }
         
@@ -523,6 +622,16 @@ async function applyFilterDataKendaraan() {
           if (currentFilter.merkBan) {
             parts.push(currentFilter.merkBan.replace(/\s+/g, '_'));
           }
+        } else if (reportType === 'pemakaian_per_masuk') {
+          parts.push('PemakaianBanPerMasuk');
+          if (currentFilter.vendorNama) {
+            parts.push(currentFilter.vendorNama.replace(/\s+/g, '_'));
+          }
+          if (currentFilter.startDate && currentFilter.endDate) {
+            parts.push(currentFilter.startDate === currentFilter.endDate 
+              ? currentFilter.startDate 
+              : `${currentFilter.startDate}_sd_${currentFilter.endDate}`);
+          }
         }
         
         parts.push(date);
@@ -561,6 +670,8 @@ async function applyFilterDataKendaraan() {
         title = 'REKAP DATA BAN KENDARAAN';
       } else if (reportType === 'ban_masuk') {
         title = 'REKAP DATA BAN MASUK';
+      } else if (reportType === 'pemakaian_per_masuk') {
+        title = 'REKAP PEMAKAIAN BAN PER MASUK';
       } else {
         title = 'REKAP DATA STOK BAN (BELUM DIPAKAI)';
       }
@@ -631,6 +742,46 @@ async function applyFilterDataKendaraan() {
             row.seri_ban_baru || '-'
           ]);
         });
+        
+      } else if (reportType === 'pemakaian_per_masuk') {
+        wsData.push([
+          'No', 'Tanggal Ban Masuk', 'Merk Ban', 'Seri Ban', 
+          'Harga', 'Vendor', 'Kendaraan', 'Tanggal Pemakaian', 'Keterangan'
+        ]);
+        
+        currentData.forEach((row, idx) => {
+          const harga = parseInt(row.harga) || 0;
+          
+          wsData.push([
+            idx + 1,
+            formatDate(row.tgl_ban_masuk),
+            row.merk_ban || '-',
+            row.no_seri || '-',
+            harga,
+            row.nama_vendor || '-',
+            row.kendaraan || '-',
+            formatDate(row.tanggal_pemakaian),
+            row.keterangan || '-'
+        ]);
+      });
+        
+      } else if (reportType === 'pemakaian_per_masuk') {
+        tableHead = [[
+          'No', 'Tgl Ban Masuk', 'Merk Ban', 'Seri Ban', 
+          'Harga', 'Vendor', 'Kendaraan', 'Tgl Pemakaian', 'Ket'
+        ]];
+        
+        tableData = currentData.map((row, idx) => [
+          idx + 1,
+          formatDate(row.tgl_ban_masuk),
+          row.merk_ban || '-',
+          row.no_seri || '-',
+          formatCurrency(row.harga),
+          row.nama_vendor || '-',
+          row.kendaraan || '-',
+          formatDate(row.tanggal_pemakaian),
+          row.keterangan || '-'
+        ]);
         
       } else {
         wsData.push([
@@ -717,6 +868,8 @@ async function applyFilterDataKendaraan() {
         title = 'REKAP DATA BAN KENDARAAN';
       } else if (reportType === 'ban_masuk') {
         title = 'REKAP DATA BAN MASUK';
+      } else if (reportType === 'pemakaian_per_masuk') {
+        title = 'REKAP PEMAKAIAN BAN PER MASUK';
       } else {
         title = 'REKAP DATA STOK BAN (BELUM DIPAKAI)';
       }
@@ -802,6 +955,24 @@ async function applyFilterDataKendaraan() {
           row.seri_ban_baru || '-'
         ]);
         
+      } else if (reportType === 'pemakaian_per_masuk') {
+        tableHead = [[
+          'No', 'Tgl Ban Masuk', 'Merk Ban', 'Seri Ban', 
+          'Harga', 'Vendor', 'Kendaraan', 'Tgl Pemakaian', 'Ket'
+        ]];
+        
+        tableData = currentData.map((row, idx) => [
+          idx + 1,
+          formatDate(row.tgl_ban_masuk),
+          row.merk_ban || '-',
+          row.no_seri || '-',
+          formatCurrency(row.harga),
+          row.nama_vendor || '-',
+          row.kendaraan || '-',
+          formatDate(row.tanggal_pemakaian),
+          row.keterangan || '-'
+        ]);
+        
       } else {
         tableHead = [[
           'No', 'Tgl Ban Masuk', 'Merk Ban', 'No. Seri', 
@@ -847,7 +1018,11 @@ async function applyFilterDataKendaraan() {
           6: { halign: 'right' }
         } : (reportType === 'penukaran' ? {
           6: { halign: 'right' }
-        } : {})
+        } : (reportType === 'pemakaian_per_masuk' ? {
+          4: { halign: 'right' },
+          1: { cellWidth: 25 },
+          7: { cellWidth: 25 }
+        } : {}))
       });
 
       // Summary (skip for data_kendaraan)
@@ -918,6 +1093,8 @@ async function applyFilterDataKendaraan() {
         (reportType === 'stok' || reportType === 'ban_masuk') ? 'flex' : 'none';
       document.getElementById('filterRowDataKendaraan').style.display = 
         reportType === 'data_kendaraan' ? 'flex' : 'none';
+      document.getElementById('filterRowPemakaianPerMasuk').style.display = 
+        reportType === 'pemakaian_per_masuk' ? 'flex' : 'none';
 
       // Show/Hide Table Headers
       document.getElementById('tableHeaderPenukaran').style.display = 
@@ -926,6 +1103,8 @@ async function applyFilterDataKendaraan() {
         reportType === 'data_kendaraan' ? '' : 'none';
       document.getElementById('tableHeaderStok').style.display = 
         (reportType === 'stok' || reportType === 'ban_masuk') ? '' : 'none';
+      document.getElementById('tableHeaderPemakaianPerMasuk').style.display = 
+        reportType === 'pemakaian_per_masuk' ? '' : 'none';
 
       // Show/Hide Date Filters
       if (reportType === 'data_kendaraan' || reportType === 'stok') {
@@ -991,6 +1170,12 @@ async function applyFilterDataKendaraan() {
       applyFilter();
     });
 
+    document.getElementById("resetFilterPemakaianPerMasuk").addEventListener("click", () => {
+      document.getElementById("vendorFilterPemakaianPerMasuk").value = "";
+      resetDateFilters();
+      applyFilter();
+    });
+
     // Real-time Merk Ban Filter
     document.getElementById('merkBanFilter').addEventListener('input', function() {
       const reportType = document.getElementById('reportType').value;
@@ -1021,6 +1206,7 @@ async function applyFilterDataKendaraan() {
       document.getElementById("vendorFilterStok").value = "";
       document.getElementById("merkBanFilter").value = "";
       document.getElementById("kendaraanFilterData").value = "";
+      document.getElementById("vendorFilterPemakaianPerMasuk").value = "";
     }
 
     // ============================================

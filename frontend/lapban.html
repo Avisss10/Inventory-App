@@ -27,6 +27,7 @@
             <option value="stok">Stok Ban (Belum Dipakai)</option>
             <option value="ban_masuk">Ban Masuk</option>
             <option value="data_kendaraan">Data Kendaraan</option>
+            <option value="pemakaian_per_masuk">Pemakaian Ban per Masuk</option>
           </select>
         </div>
         <div class="filter-group" id="filterTypeGroup">
@@ -99,6 +100,21 @@
           <button type="button" id="resetFilterDataKendaraan" class="btn-reset">Reset</button>
         </div>
       </div>
+
+      <!-- Filter for Pemakaian Ban per Masuk Report -->
+      <div class="filter-row" id="filterRowPemakaianPerMasuk" style="display: none;">
+        <div class="filter-group wide">
+          <label>Vendor:</label>
+          <select id="vendorFilterPemakaianPerMasuk">
+            <option value="">Semua Vendor</option>
+            <!-- Vendor options will be injected by JS -->
+          </select>
+        </div>
+        <div class="button-group">
+          <button type="submit">Terapkan Filter</button>
+          <button type="button" id="resetFilterPemakaianPerMasuk" class="btn-reset">Reset</button>
+        </div>
+      </div>
     </form>
   </div>
 
@@ -167,6 +183,21 @@
           <th>Satuan</th>
           <th>Harga</th>
           <th>Vendor</th>
+        </tr>
+      </thead>
+      
+      <!-- Header for Pemakaian Ban per Masuk Report -->
+      <thead id="tableHeaderPemakaianPerMasuk" style="display: none;">
+        <tr>
+          <th>No</th>
+          <th>Tanggal Ban Masuk</th>
+          <th>Merk Ban</th>
+          <th>Seri Ban</th>
+          <th>Harga</th>
+          <th>Vendor</th>
+          <th>Kendaraan</th>
+          <th>Tanggal Pemakaian</th>
+          <th>Keterangan</th>
         </tr>
       </thead>
       

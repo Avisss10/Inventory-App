@@ -1935,6 +1935,73 @@ app.get("/stok_ban", (req, res) => {
     }
 });
 
+// GET /pemakaian_ban_per_masuk
+// Page: lapban.html | JS: js/ban/lapban.js
+// Fungsi: Rekap pemakaian ban berdasarkan tanggal ban masuk dengan filter tanggal dan vendor
+app.get("/pemakaian_ban_per_masuk", (req, res) => {
+    try {
+        let { start, end, vendor } = req.query;
+
+        const dateRE = /^\d{4}-\d{2}-\d{2}$/;
+        if (start && !dateRE.test(start)) return res.status(400).json({ error: "start harus format YYYY-MM-DD" });
+        if (end && !dateRE.test(end)) return res.status(400).json({ error: "end harus format YYYY-MM-DD" });
+
+        if (start && end && start > end) {
+            const tmp = start;
+            start = end;
+            end = tmp;
+        }
+
+        let sql = `
+      SELECT
+        pb.id,
+        sb.tgl_ban_masuk,
+        sb.merk_ban,
+        sb.no_seri,
+        sb.harga,
+        v.nama_vendor,
+        CONCAT(k.dt_mobil, ' - ', k.plat) AS kendaraan,
+        pb.tgl_pasang_ban_baru AS tanggal_pemakaian,
+        pb.keterangan
+      FROM penukaran_ban pb
+      JOIN stok_ban sb ON pb.id_stok = sb.id
+      LEFT JOIN vendor v ON sb.id_vendor = v.id
+      LEFT JOIN kendaraan k ON pb.id_kendaraan = k.id
+      WHERE 1=1
+    `;
+        const params = [];
+
+        if (start && end) {
+            sql += " AND DATE(sb.tgl_ban_masuk) BETWEEN ? AND ?";
+            params.push(start, end);
+        } else if (start) {
+            sql += " AND DATE(sb.tgl_ban_masuk) = ?";
+            params.push(start);
+        } else if (end) {
+            sql += " AND DATE(sb.tgl_ban_masuk) = ?";
+            params.push(end);
+        }
+
+        if (vendor) {
+            sql += " AND sb.id_vendor = ?";
+            params.push(vendor);
+        }
+
+        sql += " ORDER BY sb.tgl_ban_masuk DESC, pb.id DESC";
+
+        db.query(sql, params, (err, results) => {
+            if (err) {
+                console.error("Error /pemakaian_ban_per_masuk:", err);
+                return res.status(500).json({ error: err.sqlMessage || err.message });
+            }
+            res.json(results);
+        });
+    } catch (err) {
+        console.error("Exception /pemakaian_ban_per_masuk:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // GET /data_kendaraan
 // Page: lapban.html | JS: js/ban/lapban.js
 // Fungsi: Riwayat penukaran ban per kendaraan dengan filter tanggal
