@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Pemakaian Barang</title>
+    <link rel="stylesheet" href="./css/sparepart/editpemakaian.css">
+</head>
+<body>
+    <div class="container">
+        <a href="./index.html" class="back-button">← Kembali</a>
+
+        <div class="header">
+            <h1>Edit Pemakaian Barang</h1>
+            <p>Kelola dan edit data pemakaian sparepart</p>
+        </div>
+
+        <!-- Filter Box -->
+        <div class="filter-box">
+            <h2>Filter Data</h2>
+            <div class="filter-controls">
+                <div class="filter-group">
+                    <label for="filterType">Pilih Filter</label>
+                    <select id="filterType">
+                        <option value="today">Hari Ini</option>
+                        <option value="date">Pilih Tanggal</option>
+                    </select>
+                </div>
+                <div class="filter-group" id="dateGroup" style="display: none;">
+                    <label for="filterDate">Tanggal</label>
+                    <input type="date" id="filterDate">
+                </div>
+            </div>
+            <div class="filter-buttons">
+                <button class="btn btn-primary" onclick="terapkanFilter()">Terapkan</button>
+                <button class="btn btn-secondary" onclick="resetFilter()">Reset</button>
+            </div>
+        </div>
+
+        <!-- Data Box -->
+        <div class="data-box">
+            <h2>Data Pemakaian</h2>
+            <div class="data-info">
+                <span class="data-count">Total: <strong id="totalData">0</strong></span>
+            </div>
+
+            <div class="table-container">
+                <table id="dataTable">
+                    <thead>
+                        <tr>
+                            <th>No</th>
+                            <th>Tanggal</th>
+                            <th>Nama Sparepart</th>
+                            <th>No Seri</th>
+                            <th>Jumlah</th>
+                            <th>Satuan</th>
+                            <th>Kendaraan</th>
+                            <th>Penanggung Jawab</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr>
+                            <td colspan="9" class="loading">Memuat data...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Edit -->
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Pemakaian</h3>
+                <button class="close-modal" onclick="closeModal()">×</button>
+            </div>
+            <form id="editForm">
+                <input type="hidden" id="editId">
+                
+                <div class="form-group">
+                    <label for="editSparepart">Sparepart</label>
+                    <input type="text" id="editSparepart" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label for="editKendaraan">Kendaraan</label>
+                    <input type="text" id="editKendaraan" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label for="editJumlah">Jumlah *</label>
+                    <input type="number" id="editJumlah" step="0.01" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="editSatuan">Satuan</label>
+                    <input type="text" id="editSatuan" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label for="editPenanggungJawab">Penanggung Jawab</label>
+                    <input type="text" id="editPenanggungJawab" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label for="editTanggal">Tanggal</label>
+                    <input type="date" id="editTanggal" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label for="editKeterangan">Keterangan Perubahan *</label>
+                    <textarea id="editKeterangan" rows="3" required ></textarea>
+                </div>
+
+                <div class="modal-buttons">
+                    <button type="button" class="btn-delete-modal" onclick="deleteCurrentData()">Hapus</button>
+                    <button type="button" class="btn-cancel" onclick="closeModal()">Batal</button>
+                    <button type="submit" class="btn-save">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Konfirmasi Hapus dengan Keterangan -->
+    <div class="modal" id="deleteModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Konfirmasi Hapus</h3>
+                <button class="close-modal" onclick="closeDeleteModal()">×</button>
+            </div>
+            <form id="deleteForm">
+                <p style="margin-bottom: 20px; color: #ef4444; font-weight: 500;">
+                    ⚠️ Apakah Anda yakin ingin menghapus data ini? Stok akan dikembalikan.
+                </p>
+                
+                <div class="form-group">
+                    <label for="deleteKeterangan">Alasan Penghapusan *</label>
+                    <textarea id="deleteKeterangan" rows="3" required ></textarea>
+                </div>
+
+                <div class="modal-buttons">
+                    <button type="button" class="btn-cancel" onclick="closeDeleteModal()">Batal</button>
+                    <button type="submit" class="btn-delete-modal">Hapus Data</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="./js/sparepart/editpemakaian.js"></script>
+</body>
+</html>
