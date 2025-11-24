@@ -289,6 +289,31 @@ app.get("/barang_masuk/:id", (req, res) => {
     );
 });
 
+// PUT /barang_masuk/:id
+// Page: insparepart.html | JS: js/sparepart/insparepart.js
+// Fungsi: Mengupdate barang_masuk
+app.put("/barang_masuk/:id", (req, res) => {
+    const { id } = req.params;
+    const { tgl_sparepart_masuk, nama_sparepart, no_seri, jumlah, satuan, harga, id_vendor } = req.body;
+    const processedJumlah = satuan.toLowerCase().includes('liter') ? String(jumlah).replace(',', '.') : jumlah;
+    const jumlahNum = parseFloat(processedJumlah) || 0;
+
+    db.query(
+        "UPDATE barang_masuk SET tgl_sparepart_masuk=?, nama_sparepart=?, no_seri=?, jumlah=?, satuan=?, harga=?, id_vendor=? WHERE id=?",
+        [tgl_sparepart_masuk, nama_sparepart, no_seri, jumlahNum, satuan, harga, id_vendor, id],
+        (err, result) => {
+            if (err) {
+                console.error("Error update barang_masuk:", err);
+                return res.status(500).json({ error: err.sqlMessage || err.message });
+            }
+            if (result.affectedRows === 0) {
+                return res.status(404).json({ message: "Barang masuk tidak ditemukan" });
+            }
+            res.json({ message: "Barang masuk berhasil diperbarui" });
+        }
+    );
+});
+
 // GET /stok_sparepart
 // Page: pemakaian.html | JS: js/sparepart/pemakaian.js
 // Fungsi: Mengambil stok sparepart yang tersedia untuk form pemakaian
@@ -371,64 +396,28 @@ app.post("/sparepart", (req, res) => {
 });
 
 // PUT /sparepart/:id
-// Page: insparepart.html | JS: js/sparepart/insparepart.js
-// Fungsi: Mengupdate sparepart (UPDATE kedua tabel stok_sparepart dan barang_masuk dalam transaction)
+// UBAH: Hanya update stok_sparepart, JANGAN update barang_masuk
 app.put("/sparepart/:id", (req, res) => {
     const { id } = req.params;
     const { tgl_sparepart_masuk, nama_sparepart, no_seri, jumlah, satuan, harga, id_vendor } = req.body;
     const processedJumlah = satuan.toLowerCase().includes('liter') ? String(jumlah).replace(',', '.') : jumlah;
     const jumlahNum = parseFloat(processedJumlah) || 0;
 
-    db.beginTransaction((err) => {
-        if (err) {
-            console.error("Error beginTransaction update sparepart:", err);
-            return res.status(500).json({ error: err.sqlMessage || err.message });
-        }
-
-        // 1. Update stok_sparepart
-        db.query(
-            "UPDATE stok_sparepart SET tgl_sparepart_masuk=?, nama_sparepart=?, no_seri=?, jumlah=?, satuan=?, harga=?, id_vendor=? WHERE id=?",
-            [tgl_sparepart_masuk, nama_sparepart, no_seri, jumlahNum, satuan, harga, id_vendor, id],
-            (err, result) => {
-                if (err) {
-                    return db.rollback(() => {
-                        console.error("Error update stok_sparepart:", err);
-                        res.status(500).json({ error: err.sqlMessage || err.message });
-                    });
-                }
-                if (result.affectedRows === 0) {
-                    return db.rollback(() => {
-                        res.status(404).json({ message: "Sparepart tidak ditemukan" });
-                    });
-                }
-
-                // 2. Update barang_masuk
-                db.query(
-                    "UPDATE barang_masuk SET tgl_sparepart_masuk=?, nama_sparepart=?, no_seri=?, jumlah=?, satuan=?, harga=?, id_vendor=? WHERE id=?",
-                    [tgl_sparepart_masuk, nama_sparepart, no_seri, jumlahNum, satuan, harga, id_vendor, id],
-                    (err2) => {
-                        if (err2) {
-                            return db.rollback(() => {
-                                console.error("Error update barang_masuk:", err2);
-                                res.status(500).json({ error: err2.sqlMessage || err2.message });
-                            });
-                        }
-
-                        // 3. Commit transaction
-                        db.commit((err3) => {
-                            if (err3) {
-                                return db.rollback(() => {
-                                    console.error("Error commit update sparepart:", err3);
-                                    res.status(500).json({ error: err3.sqlMessage || err3.message });
-                                });
-                            }
-                            res.json({ message: "Sparepart berhasil diperbarui di kedua tabel" });
-                        });
-                    }
-                );
+    // HANYA UPDATE stok_sparepart
+    db.query(
+        "UPDATE stok_sparepart SET tgl_sparepart_masuk=?, nama_sparepart=?, no_seri=?, jumlah=?, satuan=?, harga=?, id_vendor=? WHERE id=?",
+        [tgl_sparepart_masuk, nama_sparepart, no_seri, jumlahNum, satuan, harga, id_vendor, id],
+        (err, result) => {
+            if (err) {
+                console.error("Error update stok_sparepart:", err);
+                return res.status(500).json({ error: err.sqlMessage || err.message });
             }
-        );
-    });
+            if (result.affectedRows === 0) {
+                return res.status(404).json({ message: "Sparepart tidak ditemukan" });
+            }
+            res.json({ message: "Sparepart berhasil diperbarui" });
+        }
+    );
 });
 
 // DELETE /sparepart/:id

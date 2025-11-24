@@ -67,6 +67,58 @@
         </div>
     </div>
 
+    <!-- Modal edit dua form: Barang Masuk + Stock Sparepart -->
+    <div id="editModal" class="modal" aria-hidden="true" style="display:none;">
+        <div class="modal-content">
+            <button id="closeModalBtn" class="modal-close">×</button>
+            <h3>Edit Data (Barang Masuk & Stock Sparepart)</h3>
+            <div class="modal-forms">
+                <form id="formBarangMasuk" class="modal-form">
+                    <h4>Form Barang Masuk</h4>
+                    <input type="hidden" id="bm_id">
+                    <label for="bm_tgl">Tanggal Masuk</label>
+                    <input type="date" id="bm_tgl" name="bm_tgl">
+                    <label for="bm_nama">Nama Sparepart</label>
+                    <input type="text" id="bm_nama" name="bm_nama">
+                    <label for="bm_no_seri">No. Seri</label>
+                    <input type="text" id="bm_no_seri" name="bm_no_seri">
+                    <label for="bm_jumlah">Jumlah</label>
+                    <input type="number" id="bm_jumlah" name="bm_jumlah" min="0">
+                    <label for="bm_satuan">Satuan</label>
+                    <input type="text" id="bm_satuan" name="bm_satuan">
+                    <label for="bm_harga">Harga</label>
+                    <input type="text" id="bm_harga" name="bm_harga">
+                    <label for="bm_vendor">Vendor</label>
+                    <input type="text" id="bm_vendor" list="vendorList" name="bm_vendor">
+                </form>
+
+                <form id="formStockSparepart" class="modal-form">
+                    <h4>Form Stock Sparepart</h4>
+                    <input type="hidden" id="sp_id">
+                    <label for="sp_tgl">Tanggal Masuk</label>
+                    <input type="date" id="sp_tgl" name="sp_tgl">
+                    <label for="sp_nama">Nama Sparepart</label>
+                    <input type="text" id="sp_nama" name="sp_nama">
+                    <label for="sp_no_seri">No. Seri</label>
+                    <input type="text" id="sp_no_seri" name="sp_no_seri">
+                    <label for="sp_jumlah">Jumlah</label>
+                    <input type="number" id="sp_jumlah" name="sp_jumlah" min="0">
+                    <label for="sp_satuan">Satuan</label>
+                    <input type="text" id="sp_satuan" name="sp_satuan">
+                    <label for="sp_harga">Harga</label>
+                    <input type="text" id="sp_harga" name="sp_harga">
+                    <label for="sp_vendor">Vendor</label>
+                    <input type="text" id="sp_vendor" list="vendorList" name="sp_vendor">
+                </form>
+            </div>
+
+            <div class="modal-actions">
+                <button id="saveBothBtn" class="btn">Simpan Perubahan</button>
+                <button id="cancelModalBtn" class="btn btn-back">Batal</button>
+            </div>
+        </div>
+    </div>
+
     <script src="./js/sparepart/insparepart.js"></script>
 </body>
 </html>
