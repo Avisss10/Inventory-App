@@ -458,7 +458,10 @@
           }
         } else if (tipe === 'kendaraan') {
           if (state.currentFilter.kendaraanLabel) filters.push(['Kendaraan', state.currentFilter.kendaraanLabel]);
-          if (state.currentFilter.jenisBarang !== 'semua') filters.push(['Jenis Barang', state.currentFilter.jenisBarang === 'sparepart' ? 'Sparepart' : 'Ban']);
+          if (state.currentFilter.jenisBarang !== 'semua') {
+            const jenisLabel = state.currentFilter.jenisBarang === 'sparepart' ? 'Sparepart' : state.currentFilter.jenisBarang === 'ban' ? 'Ban' : 'Literan';
+            filters.push(['Jenis Barang', jenisLabel]);
+          }
           if (state.currentFilter.vendorNama) filters.push(['Vendor', state.currentFilter.vendorNama]);
           filters.push(['Periode', CONFIG.filterLabels[state.currentFilter.filterType]]);
           if (state.currentFilter.startDate && state.currentFilter.endDate) {

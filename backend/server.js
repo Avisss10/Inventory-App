@@ -1780,6 +1780,62 @@ app.get("/rekap", (req, res) => {
 
                 sql += " ORDER BY pb.tgl_pasang_ban_baru DESC, pb.id DESC";
 
+            } else if (jenisBarang === 'literan') {
+                sql = `
+          SELECT
+            po.id,
+            om.no_seri,
+            om.nama_oli AS nama_sparepart,
+            '' AS merk,
+            po.jumlah_pakai AS jumlah,
+            om.satuan,
+            om.harga AS harga,
+            (po.jumlah_pakai * om.harga) AS total,
+            v.nama_vendor,
+            CONCAT(k.dt_mobil, ' - ', k.plat) AS kendaraan,
+            po.keterangan AS penanggung_jawab,
+            po.tanggal_pakai AS tanggal,
+            po.keterangan
+          FROM pemakaian_oli po
+          LEFT JOIN oli_masuk om ON po.id_oli_masuk = om.id
+          LEFT JOIN vendor v ON om.id_vendor = v.id
+          LEFT JOIN kendaraan k ON po.id_kendaraan = k.id
+          WHERE 1=1
+        `;
+
+                if (start && end) {
+                    sql += " AND DATE(po.tanggal_pakai) BETWEEN ? AND ?";
+                    params.push(start, end);
+                } else if (start) {
+                    sql += " AND DATE(po.tanggal_pakai) = ?";
+                    params.push(start);
+                } else if (end) {
+                    sql += " AND DATE(po.tanggal_pakai) = ?";
+                    params.push(end);
+                }
+
+                if (vendor) {
+                    sql += " AND om.id_vendor = ?";
+                    params.push(vendor);
+                }
+
+                if (barang) {
+                    sql += " AND om.nama_oli LIKE ?";
+                    params.push(`%${barang}%`);
+                }
+
+                if (satuan && satuan !== 'semua') {
+                    sql += " AND om.satuan = ?";
+                    params.push(satuan);
+                }
+
+                if (req.query.kendaraan) {
+                    sql += " AND po.id_kendaraan = ?";
+                    params.push(req.query.kendaraan);
+                }
+
+                sql += " ORDER BY po.tanggal_pakai DESC, po.id DESC";
+
             } else {
                 // UNION ALL untuk semua (sparepart + ban + barang + oli)
                 sql = `

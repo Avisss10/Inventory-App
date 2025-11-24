@@ -853,9 +853,7 @@ async function applyFilterDataKendaraan() {
 
       const { jsPDF } = window.jspdf;
       const reportType = currentFilter.reportType;
-      const orientation = (reportType === 'penukaran' || reportType === 'data_kendaraan') 
-        ? 'l' 
-        : 'p';
+      const orientation = 'l';
       const doc = new jsPDF(orientation, 'mm', 'a4');
 
       // Title
