@@ -102,14 +102,14 @@
             this.fetch('/kendaraan')
           ]);
 
-          $('vendorFilter').innerHTML = `
-            <option value="">Semua Vendor</option>
-            ${vendors.map(v => {
-              state.vendorNameToId[v.nama_vendor] = v.id;
-              state.vendorMap[v.id] = v.nama_vendor;
-              return `<option value="${v.nama_vendor}">${v.nama_vendor}</option>`;
-            }).join('')}
-          `;
+          vendors.forEach(v => {
+            state.vendorNameToId[v.nama_vendor] = v.id;
+            state.vendorMap[v.id] = v.nama_vendor;
+          });
+
+          $('vendorList').innerHTML = vendors.map(v => 
+            `<option value="${v.nama_vendor}">`
+          ).join('');
 
           $('kendaraanFilterList').innerHTML = kendaraans.map(k => {
             const label = `${k.dt_mobil} - ${k.plat}`;
@@ -201,7 +201,8 @@
           let url = '';
 
           if (tipe === 'stok') {
-            const vendorId = state.vendorNameToId[$('vendorFilter').value] || '';
+            const vendorNama = $('vendorFilter').value.trim();
+            const vendorId = vendorNama ? state.vendorNameToId[vendorNama] : '';
             const barang = $('barangFilter').value;
             const satuan = $('satuanFilter').value;
             const dateParams = $('filterType').value !== 'hari' ? `&start=${dateRange.start}&end=${dateRange.end}` : '';
@@ -210,7 +211,7 @@
             state.currentFilter = {
               vendor: vendorId,
               barang,
-              vendorNama: $('vendorFilter').value,
+              vendorNama: vendorNama,
               stokFilter: $('stokFilter').value,
               satuanFilter: satuan,
               startDate: $('filterType').value === 'hari' ? '' : dateRange.start,
@@ -226,7 +227,8 @@
 
             const kendaraanId = state.kendaraanLabelToId[$('kendaraanFilter').value] || '';
             const jenisBarang = $('jenisBarangFilter').value;
-            const vendorId = state.vendorNameToId[$('vendorFilter').value] || '';
+            const vendorNama = $('vendorFilter').value.trim();
+            const vendorId = vendorNama ? state.vendorNameToId[vendorNama] : '';
             
             url = `/rekap?type=kendaraan&start=${dateRange.start}&end=${dateRange.end}${kendaraanId ? `&kendaraan=${kendaraanId}` : ''}${jenisBarang !== 'semua' ? `&jenis_barang=${jenisBarang}` : ''}${vendorId ? `&vendor=${vendorId}` : ''}`;
             
@@ -235,7 +237,7 @@
               kendaraanLabel: $('kendaraanFilter').value,
               jenisBarang,
               vendor: vendorId,
-              vendorNama: $('vendorFilter').value,
+              vendorNama: vendorNama,
               startDate: dateRange.start,
               endDate: dateRange.end,
               filterType: $('filterType').value,
@@ -247,14 +249,15 @@
               return;
             }
 
-            const vendorId = state.vendorNameToId[$('vendorFilter').value] || '';
+            const vendorNama = $('vendorFilter').value.trim();
+            const vendorId = vendorNama ? state.vendorNameToId[vendorNama] : '';
             const satuan = $('satuanFilter').value;
             
             url = `/rekap?type=vendor&vendor=${vendorId}&start=${dateRange.start}&end=${dateRange.end}&satuan=${satuan}`;
             
             state.currentFilter = {
               vendor: vendorId,
-              vendorNama: $('vendorFilter').value,
+              vendorNama: vendorNama,
               startDate: dateRange.start,
               endDate: dateRange.end,
               filterType: $('filterType').value,
@@ -267,7 +270,8 @@
               return;
             }
 
-            const vendorId = state.vendorNameToId[$('vendorFilter').value] || '';
+            const vendorNama = $('vendorFilter').value.trim();
+            const vendorId = vendorNama ? state.vendorNameToId[vendorNama] : '';
             const barang = $('barangFilter').value;
             const kendaraanId = state.kendaraanLabelToId[$('kendaraanFilter').value] || '';
             
@@ -275,7 +279,7 @@
             
             state.currentFilter = {
               vendor: vendorId,
-              vendorNama: $('vendorFilter').value,
+              vendorNama: vendorNama, 
               barang,
               kendaraan: kendaraanId,
               kendaraanLabel: $('kendaraanFilter').value,

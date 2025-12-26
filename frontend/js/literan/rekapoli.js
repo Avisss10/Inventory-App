@@ -152,17 +152,15 @@ const api = {
         this.fetch('/kendaraan')
       ]);
 
-      // Load vendors
-      const vendorOptions = vendors.map(v => {
+      // Load vendors - UBAH MENJADI DATALIST
+      vendors.forEach(v => {
         state.vendorNameToId[v.nama_vendor] = v.id;
         state.vendorMap[v.id] = v.nama_vendor;
-        return `<option value="${v.id}" data-name="${v.nama_vendor}">${v.nama_vendor}</option>`;
       });
 
-      $('vendorFilter').innerHTML = `
-        <option value="">Semua Vendor</option>
-        ${vendorOptions.join('')}
-      `;
+      $('vendorList').innerHTML = vendors.map(v => 
+        `<option value="${v.nama_vendor}">`
+      ).join('');
 
       // Load kendaraans
       $('kendaraanFilterList').innerHTML = kendaraans.map(k => {
@@ -225,51 +223,53 @@ const ui = {
 // DATA HANDLER
 // ========================================
 const dataHandler = {
-  applyClientFilters(data) {
-    const tipe = $('tipeLaporan').value;
-    if (tipe !== 'oli_tersedia') return data;
+applyClientFilters(data) {
+  const tipe = $('tipeLaporan').value;
+  if (tipe !== 'oli_tersedia') return data;
 
-    let filtered = [...data];
-    const namaOli = $('namaOliFilter').value.toLowerCase().trim();
-    const vendorId = $('vendorFilter').value;
-    const noSeri = $('noSeriFilter').value.toLowerCase().trim();
-    const startDate = state.currentFilter.startDate;
-    const endDate = state.currentFilter.endDate;
+  let filtered = [...data];
+  const namaOli = $('namaOliFilter').value.toLowerCase().trim();
+  const vendorNama = $('vendorFilter').value.trim();
+  const noSeri = $('noSeriFilter').value.toLowerCase().trim();
+  const startDate = state.currentFilter.startDate;
+  const endDate = state.currentFilter.endDate;
 
-    if (namaOli) {
-      filtered = filtered.filter(item =>
-        (item.nama_oli || '').toLowerCase().includes(namaOli)
-      );
-    }
+  if (namaOli) {
+    filtered = filtered.filter(item =>
+      (item.nama_oli || '').toLowerCase().includes(namaOli)
+    );
+  }
 
-    if (noSeri) {
-      filtered = filtered.filter(item =>
-        (item.no_seri || '').toLowerCase().includes(noSeri)
-      );
-    }
+  if (noSeri) {
+    filtered = filtered.filter(item =>
+      (item.no_seri || '').toLowerCase().includes(noSeri)
+    );
+  }
 
+  // PERBAIKAN: Definisikan vendorId dengan benar
+  if (vendorNama) {
+    const vendorId = state.vendorNameToId[vendorNama];
     if (vendorId) {
-      filtered = filtered.filter(item => item.id_vendor === parseInt(vendorId));
+      filtered = filtered.filter(item => item.id_vendor === vendorId);
     }
+  }
 
-    if (startDate && endDate) {
-      filtered = filtered.filter(item => {
-        const itemDate = new Date(item.tanggal_masuk);
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        return itemDate >= start && itemDate <= end;
-      });
-    }
+  if (startDate && endDate) {
+    filtered = filtered.filter(item => {
+      const itemDate = new Date(item.tanggal_masuk);
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      return itemDate >= start && itemDate <= end;
+    });
+  }
 
-    state.currentFilter.namaOli = $('namaOliFilter').value || '';
-    state.currentFilter.noSeri = $('noSeriFilter').value || '';
-    state.currentFilter.vendor = vendorId;
-    state.currentFilter.vendorNama = vendorId
-      ? $('vendorFilter').options[$('vendorFilter').selectedIndex].text
-      : '';
+  state.currentFilter.namaOli = $('namaOliFilter').value || '';
+  state.currentFilter.noSeri = $('noSeriFilter').value || '';
+  state.currentFilter.vendor = vendorNama ? state.vendorNameToId[vendorNama] : '';
+  state.currentFilter.vendorNama = vendorNama;
 
-    return filtered;
-  },
+  return filtered;
+},
 
   async loadData(tipe) {
     try {
@@ -292,7 +292,8 @@ const dataHandler = {
         params.append('start', dateRange.start);
         params.append('end', dateRange.end);
 
-        const vendorId = $('vendorFilter').value;
+        const vendorNama = $('vendorFilter').value.trim();
+        const vendorId = vendorNama ? state.vendorNameToId[vendorNama] : '';
         const namaOli = $('namaOliFilter').value || '';
         const noSeri = $('noSeriFilter').value || '';
 
@@ -302,9 +303,7 @@ const dataHandler = {
 
         state.currentFilter = {
           vendor: vendorId,
-          vendorNama: vendorId
-            ? $('vendorFilter').options[$('vendorFilter').selectedIndex].text
-            : '',
+          vendorNama: vendorNama,
           namaOli,
           noSeri,
           startDate: dateRange.start,
@@ -321,7 +320,8 @@ const dataHandler = {
           return;
         }
 
-        const vendorId = $('vendorFilter').value;
+        const vendorNama = $('vendorFilter').value.trim();
+        const vendorId = vendorNama ? state.vendorNameToId[vendorNama] : '';
         const namaOli = $('namaOliFilter').value || '';
         const noSeri = $('noSeriFilter').value || '';
 
@@ -331,9 +331,7 @@ const dataHandler = {
 
         state.currentFilter = {
           vendor: vendorId,
-          vendorNama: vendorId
-            ? $('vendorFilter').options[$('vendorFilter').selectedIndex].text
-            : '',
+          vendorNama: vendorNama,
           namaOli,
           noSeri,
           startDate: dateRange.start,
@@ -355,7 +353,8 @@ const dataHandler = {
 
         const kendaraanId = state.kendaraanLabelToId[$('kendaraanFilter').value] || '';
         const namaOli = $('namaOliFilter').value || '';
-        const vendorId = $('vendorFilter').value;
+        const vendorNama = $('vendorFilter').value.trim();
+        const vendorId = vendorNama ? state.vendorNameToId[vendorNama] : '';
         const noSeri = $('noSeriFilter').value || '';
 
         if (kendaraanId) params.append('kendaraan', kendaraanId);
@@ -369,9 +368,7 @@ const dataHandler = {
           namaOli,
           noSeri,
           vendor: vendorId,
-          vendorNama: vendorId
-            ? $('vendorFilter').options[$('vendorFilter').selectedIndex].text
-            : '',
+          vendorNama: vendorNama,
           startDate: dateRange.start,
           endDate: dateRange.end,
           filterType,
@@ -391,7 +388,8 @@ const dataHandler = {
 
         const kendaraanId = state.kendaraanLabelToId[$('kendaraanFilter').value] || '';
         const namaOli = $('namaOliFilter').value || '';
-        const vendorId = $('vendorFilter').value;
+        const vendorNama = $('vendorFilter').value.trim();
+        const vendorId = vendorNama ? state.vendorNameToId[vendorNama] : '';
         const noSeri = $('noSeriFilter').value || '';
 
         if (kendaraanId) params.append('kendaraan', kendaraanId);
@@ -405,9 +403,7 @@ const dataHandler = {
           namaOli,
           noSeri,
           vendor: vendorId,
-          vendorNama: vendorId
-            ? $('vendorFilter').options[$('vendorFilter').selectedIndex].text
-            : '',
+          vendorNama: vendorNama,
           startDate: dateRange.start,
           endDate: dateRange.end,
           filterType,

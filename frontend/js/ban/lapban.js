@@ -15,31 +15,35 @@
       try {
         const res = await fetch("http://localhost:3000/vendor");
         const vendors = await res.json();
-        // Ganti isi vendorFilter, vendorFilterStok, dan vendorFilterPemakaianPerMasuk menjadi dropdown
-        const vendorSelect1 = document.getElementById("vendorFilter");
-        const vendorSelect2 = document.getElementById("vendorFilterStok");
-        const vendorSelect3 = document.getElementById("vendorFilterPemakaianPerMasuk");
-        vendorSelect1.innerHTML = '<option value="">Semua Vendor</option>';
-        vendorSelect2.innerHTML = '<option value="">Semua Vendor</option>';
-        vendorSelect3.innerHTML = '<option value="">Semua Vendor</option>';
+        
+        // Populate datalists untuk semua vendor filter
+        const vendorList1 = document.getElementById("vendorList");
+        const vendorList2 = document.getElementById("vendorListStok");
+        const vendorList3 = document.getElementById("vendorListPemakaianPerMasuk");
+        
+        vendorList1.innerHTML = '';
+        vendorList2.innerHTML = '';
+        vendorList3.innerHTML = '';
+        
         vendors.forEach(v => {
-          const option1 = document.createElement("option");
-          option1.value = v.id;
-          option1.textContent = v.nama_vendor;
-          vendorSelect1.appendChild(option1);
-
-          const option2 = document.createElement("option");
-          option2.value = v.id;
-          option2.textContent = v.nama_vendor;
-          vendorSelect2.appendChild(option2);
-
-          const option3 = document.createElement("option");
-          option3.value = v.id;
-          option3.textContent = v.nama_vendor;
-          vendorSelect3.appendChild(option3);
-
+          // Simpan mapping
           vendorNameToId[v.nama_vendor] = v.id;
           vendorMap[v.id] = v.nama_vendor;
+          
+          // Tambahkan ke datalist 1
+          const option1 = document.createElement("option");
+          option1.value = v.nama_vendor;
+          vendorList1.appendChild(option1);
+          
+          // Tambahkan ke datalist 2
+          const option2 = document.createElement("option");
+          option2.value = v.nama_vendor;
+          vendorList2.appendChild(option2);
+          
+          // Tambahkan ke datalist 3
+          const option3 = document.createElement("option");
+          option3.value = v.nama_vendor;
+          vendorList3.appendChild(option3);
         });
       } catch (error) {
         console.error("Error loading vendors:", error);
@@ -394,7 +398,8 @@
       startDate = dateRange.startDate;
       endDate = dateRange.endDate;
 
-      const vendorId = document.getElementById("vendorFilter").value;
+      const vendorNama = document.getElementById("vendorFilter").value.trim(); 
+      const vendorId = vendorNama ? vendorNameToId[vendorNama] : ''; 
       const kendaraanLabel = document.getElementById("kendaraanFilter").value;
       const kendaraanId = kendaraanLabelToId[kendaraanLabel] || "";
 
@@ -404,7 +409,7 @@
         vendor: vendorId,
         kendaraan: kendaraanId,
         filterType,
-        vendorNama: vendorMap[vendorId] || "",
+        vendorNama: vendorNama,
         kendaraanLabel,
         reportType: 'penukaran'
       };
@@ -434,7 +439,8 @@ async function applyFilterDataKendaraan() {
 }
 
     async function applyFilterStok(reportType) {
-      const vendorId = document.getElementById("vendorFilterStok").value;
+      const vendorNama = document.getElementById("vendorFilterStok").value.trim();
+      const vendorId = vendorNama ? vendorNameToId[vendorNama] : ''; 
       const merkBan = document.getElementById("merkBanFilter").value;
 
       let startDate = '';
@@ -464,7 +470,7 @@ async function applyFilterDataKendaraan() {
         vendor: vendorId,
         merkBan,
         filterType,
-        vendorNama: vendorMap[vendorId] || "",
+        vendorNama: vendorNama,
         reportType
       };
 
@@ -497,14 +503,15 @@ async function applyFilterDataKendaraan() {
       startDate = dateRange.startDate;
       endDate = dateRange.endDate;
 
-      const vendorId = document.getElementById("vendorFilterPemakaianPerMasuk").value;
+        const vendorNama = document.getElementById("vendorFilterPemakaianPerMasuk").value.trim();
+        const vendorId = vendorNama ? vendorNameToId[vendorNama] : '';
 
       currentFilter = {
         startDate,
         endDate,
         vendor: vendorId,
         filterType,
-        vendorNama: vendorMap[vendorId] || "",
+        vendorNama: vendorNama,
         reportType: 'pemakaian_per_masuk'
       };
 

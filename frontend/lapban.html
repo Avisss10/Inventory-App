@@ -53,10 +53,8 @@
       <div class="filter-row" id="filterRowPenukaran">
         <div class="filter-group wide">
           <label>Vendor:</label>
-          <select id="vendorFilter">
-            <option value="">Semua Vendor</option>
-            <!-- Vendor options will be injected by JS -->
-          </select>
+          <input type="text" id="vendorFilter" placeholder="Ketik untuk mencari Vendor..." list="vendorList">
+          <datalist id="vendorList"></datalist>
         </div>
         <div class="filter-group wide">
           <label>Kendaraan:</label>
@@ -73,10 +71,8 @@
       <div class="filter-row" id="filterRowStok" style="display: none;">
         <div class="filter-group wide">
           <label>Vendor:</label>
-          <select id="vendorFilterStok">
-            <option value="">Semua Vendor</option>
-            <!-- Vendor options will be injected by JS -->
-          </select>
+          <input type="text" id="vendorFilterStok" placeholder="Ketik untuk mencari Vendor..." list="vendorListStok">
+          <datalist id="vendorListStok"></datalist>
         </div>
         <div class="filter-group wide">
           <label>Merk Ban:</label>
@@ -105,10 +101,8 @@
       <div class="filter-row" id="filterRowPemakaianPerMasuk" style="display: none;">
         <div class="filter-group wide">
           <label>Vendor:</label>
-          <select id="vendorFilterPemakaianPerMasuk">
-            <option value="">Semua Vendor</option>
-            <!-- Vendor options will be injected by JS -->
-          </select>
+          <input type="text" id="vendorFilterPemakaianPerMasuk" placeholder="Ketik untuk mencari Vendor..." list="vendorListPemakaianPerMasuk">
+          <datalist id="vendorListPemakaianPerMasuk"></datalist>
         </div>
         <div class="button-group">
           <button type="submit">Terapkan Filter</button>

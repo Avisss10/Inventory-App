@@ -61,9 +61,8 @@
 
         <div class="filter-group wide filter-oli_masuk filter-oli_tersedia filter-pemakaian_oli filter-pemakaian_per_bon">
           <label>Vendor:</label>
-          <select id="vendorFilter">
-            <option value="">Semua Vendor</option>
-          </select>
+          <input type="text" id="vendorFilter" placeholder="Ketik untuk mencari Vendor..." list="vendorList">
+          <datalist id="vendorList"></datalist>
         </div>
 
         <div class="filter-group wide filter-pemakaian_oli filter-pemakaian_per_bon filter-hidden">
