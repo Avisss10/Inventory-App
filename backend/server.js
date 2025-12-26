@@ -3333,6 +3333,73 @@ app.get("/rekap/pemakaian_oli", (req, res) => {
     });
 });
 
+// GET /rekap/pemakaian_per_bon
+// Page: rekapoli.html | JS: js/literan/rekapoli.js
+// Fungsi: Rekap pemakaian oli berdasarkan tanggal barang masuk dengan filter
+app.get("/rekap/pemakaian_per_bon", (req, res) => {
+    const { start, end, vendor, nama_oli, no_seri, kendaraan } = req.query;
+
+    let sql = `
+    SELECT
+      po.id,
+      om.tanggal_masuk AS tanggal_masuk,
+      om.no_seri,
+      om.nama_oli,
+      v.nama_vendor,
+      CONCAT(k.dt_mobil, ' - ', k.plat) AS kendaraan,
+      po.jumlah_pakai,
+      om.harga,
+      (po.jumlah_pakai * om.harga) AS total,
+      po.keterangan,
+      po.tanggal_pakai AS tanggal_pemakaian,
+      om.id_vendor,
+      po.id_kendaraan
+    FROM pemakaian_oli po
+    JOIN oli_masuk om ON po.id_oli_masuk = om.id
+    LEFT JOIN vendor v ON om.id_vendor = v.id
+    LEFT JOIN kendaraan k ON po.id_kendaraan = k.id
+    WHERE 1=1
+  `;
+
+    const params = [];
+
+    // Filter berdasarkan tanggal barang masuk
+    if (start && end) {
+        sql += ` AND DATE(om.tanggal_masuk) BETWEEN ? AND ?`;
+        params.push(start, end);
+    }
+
+    if (vendor) {
+        sql += ` AND om.id_vendor = ?`;
+        params.push(vendor);
+    }
+
+    if (nama_oli) {
+        sql += ` AND om.nama_oli LIKE ?`;
+        params.push(`%${nama_oli}%`);
+    }
+
+    if (no_seri) {
+        sql += ` AND om.no_seri LIKE ?`;
+        params.push(`%${no_seri}%`);
+    }
+
+    if (kendaraan) {
+        sql += ` AND po.id_kendaraan = ?`;
+        params.push(kendaraan);
+    }
+
+    sql += ` ORDER BY om.tanggal_masuk DESC, po.tanggal_pakai DESC, po.id DESC`;
+
+    db.query(sql, params, (err, results) => {
+        if (err) {
+            console.error("Error /rekap/pemakaian_per_bon GET:", err);
+            return res.status(500).json({ error: err.sqlMessage || err.message });
+        }
+        res.json(results);
+    });
+});
+
 // ========================================
 // GENERAL ENDPOINTS
 // ========================================

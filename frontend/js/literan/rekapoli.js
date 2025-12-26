@@ -7,7 +7,8 @@ const CONFIG = {
   columnCounts: {
     oli_masuk: 8,
     oli_tersedia: 14,
-    pemakaian_oli: 10
+    pemakaian_oli: 10,
+    pemakaian_per_bon: 11
   },
   headers: {
     oli_masuk: [
@@ -22,12 +23,17 @@ const CONFIG = {
     pemakaian_oli: [
       'No', 'Tanggal', 'Nama Literan', 'No Seri', 'Kendaraan',
       'Jumlah (L)', 'Harga Satuan', 'Total', 'Keterangan', 'Vendor'
+    ],
+    pemakaian_per_bon: [
+      'No', 'Tanggal Masuk', 'No Seri', 'Nama Literan', 'Vendor',
+      'Kendaraan', 'Jumlah (L)', 'Harga Satuan', 'Total', 'Keterangan', 'Tanggal Pemakaian'
     ]
   },
   titles: {
     oli_masuk: 'REKAP LITERAN MASUK (TANPA GABUNGAN)',
     oli_tersedia: 'REKAP LITERAN TERSEDIA (STOK)',
-    pemakaian_oli: 'REKAP PEMAKAIAN LITERAN'
+    pemakaian_oli: 'REKAP PEMAKAIAN LITERAN',
+    pemakaian_per_bon: 'REKAP PEMAKAIAN PER BON'
   },
   filterLabels: {
     hari: 'Hari Ini',
@@ -374,6 +380,42 @@ const dataHandler = {
 
         url = `/rekap/pemakaian_oli?${params.toString()}`;
       }
+      else if (tipe === 'pemakaian_per_bon') {
+        if (!dateRange.start || !dateRange.end) {
+          alert('Harap isi tanggal untuk filter!');
+          return;
+        }
+
+        params.append('start', dateRange.start);
+        params.append('end', dateRange.end);
+
+        const kendaraanId = state.kendaraanLabelToId[$('kendaraanFilter').value] || '';
+        const namaOli = $('namaOliFilter').value || '';
+        const vendorId = $('vendorFilter').value;
+        const noSeri = $('noSeriFilter').value || '';
+
+        if (kendaraanId) params.append('kendaraan', kendaraanId);
+        if (namaOli) params.append('nama_oli', namaOli);
+        if (vendorId) params.append('vendor', vendorId);
+        if (noSeri) params.append('no_seri', noSeri);
+
+        state.currentFilter = {
+          kendaraan: kendaraanId,
+          kendaraanLabel: $('kendaraanFilter').value || '',
+          namaOli,
+          noSeri,
+          vendor: vendorId,
+          vendorNama: vendorId
+            ? $('vendorFilter').options[$('vendorFilter').selectedIndex].text
+            : '',
+          startDate: dateRange.start,
+          endDate: dateRange.end,
+          filterType,
+          tipe: 'pemakaian_per_bon'
+        };
+
+        url = `/rekap/pemakaian_per_bon?${params.toString()}`;
+      }
 
       ui.showLoading(tipe);
       const data = await api.fetch(url);
@@ -537,6 +579,26 @@ const dataHandler = {
           <td style="text-align: left;">${row.keterangan || '-'}</td>
           <td style="text-align: left;">${row.nama_vendor || '-'}</td>
         `;
+      },
+
+     pemakaian_per_bon: () => {
+        const jumlah = utils.parseQty(row.jumlah_pakai);
+        const hargaSatuan = utils.parseQty(row.harga || 0);
+        const total = jumlah * hargaSatuan;
+        
+        return `
+          <td>${idx + 1}</td>
+          <td>${utils.formatDate(row.tanggal_masuk)}</td>
+          <td>${row.no_seri || '-'}</td>
+          <td style="text-align: left;">${row.nama_oli || ''}</td>
+          <td style="text-align: left;">${row.nama_vendor || '-'}</td>
+          <td style="text-align: left;">${row.kendaraan || '-'}</td>
+          <td>${jumlah.toFixed(2)}</td>
+          <td>${utils.formatCurrency(hargaSatuan)}</td>
+          <td>${utils.formatCurrency(total)}</td>
+          <td style="text-align: left;">${row.keterangan || '-'}</td>
+          <td>${utils.formatDate(row.tanggal_pemakaian)}</td>
+        `;
       }
     };
 
@@ -578,6 +640,12 @@ const dataHandler = {
         totalLiter += jumlah;
         totalCost += jumlah * hargaSatuan;
       }
+      else if (tipe === 'pemakaian_per_bon') {
+      const jumlah = utils.parseQty(row.jumlah_pakai);
+      const hargaSatuan = utils.parseQty(row.harga || 0);
+      totalLiter += jumlah;
+      totalCost += jumlah * hargaSatuan;
+    }
     });
 
     return { totalLiter, totalCost };
@@ -648,6 +716,23 @@ async function loadInitialData(tipe) {
         endDate: todayISO,
         filterType: 'hari',
         tipe: 'pemakaian_oli'
+      };
+    }
+    else if (tipe === 'pemakaian_per_bon') {
+      const params = new URLSearchParams();
+      params.append('start', todayISO);
+      params.append('end', todayISO);
+
+      url = `/rekap/pemakaian_per_bon?${params.toString()}`;
+      state.currentFilter = {
+        kendaraan: '',
+        kendaraanLabel: '',
+        namaOli: '',
+        noSeri: '',
+        startDate: todayISO,
+        endDate: todayISO,
+        filterType: 'hari',
+        tipe: 'pemakaian_per_bon'
       };
     }
 
@@ -871,6 +956,25 @@ const exporter = {
           row.nama_vendor || '-'
         ]);
       }
+      else if (tipe === 'pemakaian_per_bon') {
+        const jumlah = utils.parseQty(row.jumlah_pakai);
+        const hargaSatuan = utils.parseQty(row.harga || 0);
+        const total = jumlah * hargaSatuan;
+        
+        wsData.push([
+          idx + 1,
+          utils.formatDate(row.tanggal_masuk),
+          row.no_seri || '-',
+          row.nama_oli || '',
+          row.nama_vendor || '-',
+          row.kendaraan || '-',
+          jumlah,
+          hargaSatuan,
+          total,
+          row.keterangan || '-',
+          utils.formatDate(row.tanggal_pemakaian)
+        ]);
+      }
     });
 
     // ===== SUMMARY =====
@@ -882,7 +986,8 @@ const exporter = {
     const summaryLabels = {
       oli_masuk: 'Total Literan Masuk',
       oli_tersedia: 'Total Stok Tersedia',
-      pemakaian_oli: 'Total Literan Terpakai'
+      pemakaian_oli: 'Total Literan Terpakai',
+      pemakaian_per_bon: 'Total Literan Terpakai'
     };
 
     wsData.push([`${summaryLabels[tipe]}:`, `${summary.totalLiter.toFixed(2)} Liter`]);
@@ -930,6 +1035,19 @@ const exporter = {
         { wch: 18 }, // Total
         { wch: 30 }, // Keterangan
         { wch: 20 }  // Vendor
+      ],
+      pemakaian_per_bon: [
+        { wch: 5 },  // No
+        { wch: 12 }, // Tanggal Masuk
+        { wch: 15 }, // No Seri
+        { wch: 25 }, // Nama Literan
+        { wch: 20 }, // Vendor
+        { wch: 25 }, // Kendaraan
+        { wch: 12 }, // Jumlah
+        { wch: 15 }, // Harga Satuan
+        { wch: 18 }, // Total
+        { wch: 30 }, // Keterangan
+        { wch: 15 }  // Tanggal Pemakaian
       ]
     };
     ws['!cols'] = columnWidths[tipe];
@@ -1072,6 +1190,25 @@ const exporter = {
           row.nama_vendor || '-'
         ];
       }
+      else if (tipe === 'pemakaian_per_bon') {
+        const jumlah = utils.parseQty(row.jumlah_pakai);
+        const hargaSatuan = utils.parseQty(row.harga || 0);
+        const total = jumlah * hargaSatuan;
+        
+        return [
+          idx + 1,
+          utils.formatDate(row.tanggal_masuk),
+          row.no_seri || '-',
+          row.nama_oli || '',
+          row.nama_vendor || '-',
+          row.kendaraan || '-',
+          jumlah.toFixed(2),
+          utils.formatCurrency(hargaSatuan),
+          utils.formatCurrency(total),
+          row.keterangan || '-',
+          utils.formatDate(row.tanggal_pemakaian)
+        ];
+      }
     });
 
     // Column Styles untuk masing-masing tipe
@@ -1113,6 +1250,19 @@ const exporter = {
         7: { halign: 'right', cellWidth: 32 },   // Total
         8: { halign: 'left', cellWidth: 35 },    // Keterangan
         9: { halign: 'left', cellWidth: 30 }     // Vendor
+      },
+      pemakaian_per_bon: {
+        0: { halign: 'center', cellWidth: 8 },   // No
+        1: { halign: 'center', cellWidth: 22 },  // Tanggal Masuk
+        2: { halign: 'center', cellWidth: 20 },  // No Seri
+        3: { halign: 'left', cellWidth: 35 },    // Nama Literan
+        4: { halign: 'left', cellWidth: 28 },    // Vendor
+        5: { halign: 'left', cellWidth: 32 },    // Kendaraan
+        6: { halign: 'right', cellWidth: 15 },   // Jumlah
+        7: { halign: 'right', cellWidth: 25 },   // Harga Satuan
+        8: { halign: 'right', cellWidth: 28 },   // Total
+        9: { halign: 'left', cellWidth: 30 },    // Keterangan
+        10: { halign: 'center', cellWidth: 22 }  // Tanggal Pemakaian
       }
     };
 
@@ -1167,7 +1317,8 @@ const exporter = {
     const summaryLabels = {
       oli_masuk: 'Total Literan Masuk',
       oli_tersedia: 'Total Stok Tersedia',
-      pemakaian_oli: 'Total Literan Terpakai'
+      pemakaian_oli: 'Total Literan Terpakai',
+      pemakaian_per_bon: 'Total Literan Terpakai'
     };
 
     doc.text(`${summaryLabels[tipe]}: ${summary.totalLiter.toFixed(2)} Liter`, 14, finalY);
