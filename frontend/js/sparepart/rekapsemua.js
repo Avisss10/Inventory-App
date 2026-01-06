@@ -130,7 +130,6 @@
         $$('.filter-stok, .filter-kendaraan, .filter-vendor, .filter-pemakaian_vendor').forEach(el => el.classList.add('filter-hidden'));
         // Show filters for the selected type
         $$(`.filter-${tipe}`).forEach(el => el.classList.remove('filter-hidden'));
-        $('filterWaktuGroup').classList.remove('filter-hidden');
       },
 
       updateHeaders(tipe) {
@@ -265,8 +264,20 @@
               tipe: 'vendor'
             };
           } else if (tipe === 'pemakaian_vendor') {
-            if (!dateRange.start || !dateRange.end) {
-              alert('Harap isi tanggal untuk filter!');
+            // Support two independent date filters: Masuk (barang masuk) and Pemakaian (tanggal pemakaian)
+            const masukType = $('filterMasukType').value;
+            const pemakaianType = $('filterPemakaianType').value;
+
+            const masukRange = utils.getDateRange(masukType, $('filterMasukStart').value, $('filterMasukEnd').value);
+            const pemakaianRange = utils.getDateRange(pemakaianType, $('filterPemakaianStart').value, $('filterPemakaianEnd').value);
+
+            // If user selected manual but didn't fill dates, ask them to fill
+            if (masukType === 'manual' && (!masukRange.start || !masukRange.end)) {
+              alert('Harap isi tanggal untuk filter Tanggal Masuk!');
+              return;
+            }
+            if (pemakaianType === 'manual' && (!pemakaianRange.start || !pemakaianRange.end)) {
+              alert('Harap isi tanggal untuk filter Tanggal Pemakaian!');
               return;
             }
 
@@ -274,18 +285,25 @@
             const vendorId = vendorNama ? state.vendorNameToId[vendorNama] : '';
             const barang = $('barangFilter').value;
             const kendaraanId = state.kendaraanLabelToId[$('kendaraanFilter').value] || '';
-            
-            url = `/pemakaian_vendor?start=${dateRange.start}&end=${dateRange.end}&vendor=${vendorId}&barang=${barang}&kendaraan=${kendaraanId}`;
-            
+
+            const masukParams = (masukType && masukRange.start && masukRange.end) ? `&masuk_start=${masukRange.start}&masuk_end=${masukRange.end}` : '';
+            const pemakaianParams = (pemakaianType && pemakaianRange.start && pemakaianRange.end) ? `&pemakaian_start=${pemakaianRange.start}&pemakaian_end=${pemakaianRange.end}` : '';
+
+            url = `/pemakaian_vendor?vendor=${vendorId}&barang=${barang}&kendaraan=${kendaraanId}${masukParams}${pemakaianParams}`;
+
             state.currentFilter = {
               vendor: vendorId,
-              vendorNama: vendorNama, 
+              vendorNama: vendorNama,
               barang,
               kendaraan: kendaraanId,
               kendaraanLabel: $('kendaraanFilter').value,
-              startDate: dateRange.start,
-              endDate: dateRange.end,
-              filterType: $('filterType').value,
+              masukStart: masukRange.start || '',
+              masukEnd: masukRange.end || '',
+              masukFilterType: masukType,
+              pemakaianStart: pemakaianRange.start || '',
+              pemakaianEnd: pemakaianRange.end || '',
+              pemakaianFilterType: pemakaianType,
+              filterType: `${masukType}|${pemakaianType}`,
               tipe: 'pemakaian_vendor'
             };
           }
@@ -483,9 +501,21 @@
           if (state.currentFilter.vendorNama) filters.push(['Vendor', state.currentFilter.vendorNama]);
           if (state.currentFilter.barang) filters.push(['Nama Barang', state.currentFilter.barang]);
           if (state.currentFilter.kendaraanLabel) filters.push(['Kendaraan', state.currentFilter.kendaraanLabel]);
-          filters.push(['Periode', CONFIG.filterLabels[state.currentFilter.filterType]]);
-          if (state.currentFilter.startDate && state.currentFilter.endDate) {
-            filters.push(['Tanggal', state.currentFilter.startDate === state.currentFilter.endDate ? state.currentFilter.startDate : `${state.currentFilter.startDate} s/d ${state.currentFilter.endDate}`]);
+
+          // Describe Masuk filter
+          if (state.currentFilter.masukFilterType) {
+            filters.push(['Periode Tanggal Masuk', CONFIG.filterLabels[state.currentFilter.masukFilterType]]);
+            if (state.currentFilter.masukStart && state.currentFilter.masukEnd) {
+              filters.push(['Tanggal Masuk', state.currentFilter.masukStart === state.currentFilter.masukEnd ? state.currentFilter.masukStart : `${state.currentFilter.masukStart} s/d ${state.currentFilter.masukEnd}`]);
+            }
+          }
+
+          // Describe Pemakaian filter
+          if (state.currentFilter.pemakaianFilterType) {
+            filters.push(['Periode Tanggal Pemakaian', CONFIG.filterLabels[state.currentFilter.pemakaianFilterType]]);
+            if (state.currentFilter.pemakaianStart && state.currentFilter.pemakaianEnd) {
+              filters.push(['Tanggal Pemakaian', state.currentFilter.pemakaianStart === state.currentFilter.pemakaianEnd ? state.currentFilter.pemakaianStart : `${state.currentFilter.pemakaianStart} s/d ${state.currentFilter.pemakaianEnd}`]);
+            }
           }
         }
 
@@ -529,10 +559,16 @@
           if (state.currentFilter.kendaraanLabel) {
             parts.push(state.currentFilter.kendaraanLabel.replace(/\s+/g, '_').replace(/-/g, '_'));
           }
-          if (state.currentFilter.startDate && state.currentFilter.endDate) {
-            parts.push(state.currentFilter.startDate === state.currentFilter.endDate 
-              ? state.currentFilter.startDate 
-              : `${state.currentFilter.startDate}_sd_${state.currentFilter.endDate}`);
+          // Add Masuk and Pemakaian ranges to filename when present
+          if (state.currentFilter.masukStart && state.currentFilter.masukEnd) {
+            parts.push(state.currentFilter.masukStart === state.currentFilter.masukEnd
+              ? `Masuk_${state.currentFilter.masukStart}`
+              : `Masuk_${state.currentFilter.masukStart}_sd_${state.currentFilter.masukEnd}`);
+          }
+          if (state.currentFilter.pemakaianStart && state.currentFilter.pemakaianEnd) {
+            parts.push(state.currentFilter.pemakaianStart === state.currentFilter.pemakaianEnd
+              ? `Pemakaian_${state.currentFilter.pemakaianStart}`
+              : `Pemakaian_${state.currentFilter.pemakaianStart}_sd_${state.currentFilter.pemakaianEnd}`);
           }
         }
 
@@ -869,6 +905,24 @@
       $('filterEnd').required = isManual;
     });
 
+    // Masuk date filter handler (pemakaian per vendor)
+    $('filterMasukType').addEventListener('change', function() {
+      const isManual = this.value === 'manual';
+      $('filterMasukStartGroup').classList.toggle('filter-hidden', !isManual);
+      $('filterMasukEndGroup').classList.toggle('filter-hidden', !isManual);
+      $('filterMasukStart').required = isManual;
+      $('filterMasukEnd').required = isManual;
+    });
+
+    // Pemakaian date filter handler (pemakaian per vendor)
+    $('filterPemakaianType').addEventListener('change', function() {
+      const isManual = this.value === 'manual';
+      $('filterPemakaianStartGroup').classList.toggle('filter-hidden', !isManual);
+      $('filterPemakaianEndGroup').classList.toggle('filter-hidden', !isManual);
+      $('filterPemakaianStart').required = isManual;
+      $('filterPemakaianEnd').required = isManual;
+    });
+
     $('barangFilter').addEventListener('input', function() {
       const tipe = $('tipeLaporan').value;
       if (tipe !== 'stok' && tipe !== 'pemakaian_vendor') return;
@@ -925,6 +979,21 @@
           ui.showEmpty(tipe, 'Terjadi kesalahan saat memuat data');
         }
       } else if (tipe === 'kendaraan' || tipe === 'pemakaian_vendor') {
+        // Reset pemakaian-specific controls nicely
+        if (tipe === 'pemakaian_vendor') {
+          $('filterMasukType').value = 'hari';
+          $('filterMasukStart').value = '';
+          $('filterMasukEnd').value = '';
+          $('filterMasukStartGroup').classList.add('filter-hidden');
+          $('filterMasukEndGroup').classList.add('filter-hidden');
+
+          $('filterPemakaianType').value = 'hari';
+          $('filterPemakaianStart').value = '';
+          $('filterPemakaianEnd').value = '';
+          $('filterPemakaianStartGroup').classList.add('filter-hidden');
+          $('filterPemakaianEndGroup').classList.add('filter-hidden');
+        }
+
         ui.showEmpty(tipe, 'Silakan pilih filter dan klik Terapkan Filter');
         $('lowStockAlert').classList.add('filter-hidden');
       } else if (tipe === 'vendor') {
@@ -951,6 +1020,9 @@
     // Initialize
     (async function init() {
       await Promise.all([api.loadBarangList(), api.loadFilters()]);
+      // Ensure new pemakaian filter controls are initialized
       $('filterType').dispatchEvent(new Event('change'));
+      $('filterMasukType').dispatchEvent(new Event('change'));
+      $('filterPemakaianType').dispatchEvent(new Event('change'));
       $('resetFilter').click();
     })();

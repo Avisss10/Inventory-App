@@ -26,7 +26,7 @@
           </select>
         </div>
 
-        <div class="filter-group filter-oli_masuk filter-oli_tersedia filter-pemakaian_oli filter-pemakaian_per_bon" id="filterWaktuGroup">
+        <div class="filter-group filter-oli_masuk filter-oli_tersedia filter-pemakaian_oli" id="filterWaktuGroup">
           <label>Filter Waktu:</label>
           <select id="filterType">
             <option value="hari">Hari Ini</option>
@@ -36,12 +36,53 @@
           </select>
         </div>
 
-        <div class="filter-group narrow filter-hidden" id="filterStartGroup">
+        <!-- Periode khusus untuk Pemakaian Per Bon -->
+        <div class="filter-group filter-pemakaian_per_bon filter-hidden" id="filterMasukWaktuGroup">
+          <label>Periode Tanggal Masuk:</label>
+          <select id="filterMasukType">
+            <option value="hari">Hari Ini</option>
+            <option value="minggu">7 Hari Terakhir</option>
+            <option value="bulan">Bulan Ini</option>
+            <option value="manual">Tanggal Manual</option>
+          </select>
+        </div>
+
+        <div class="filter-group narrow filter-pemakaian_per_bon filter-hidden" id="filterMasukStartGroup">
+          <label>Masuk - Dari:</label>
+          <input type="date" id="filterMasukStart">
+        </div>
+
+        <div class="filter-group narrow filter-pemakaian_per_bon filter-hidden" id="filterMasukEndGroup">
+          <label>Masuk - Sampai:</label>
+          <input type="date" id="filterMasukEnd">
+        </div>
+
+        <div class="filter-group filter-pemakaian_per_bon filter-hidden" id="filterPemakaianWaktuGroup">
+          <label>Periode Tanggal Pemakaian:</label>
+          <select id="filterPemakaianType">
+            <option value="hari">Hari Ini</option>
+            <option value="minggu">7 Hari Terakhir</option>
+            <option value="bulan">Bulan Ini</option>
+            <option value="manual">Tanggal Manual</option>
+          </select>
+        </div>
+
+        <div class="filter-group narrow filter-pemakaian_per_bon filter-hidden" id="filterPemakaianStartGroup">
+          <label>Pemakaian - Dari:</label>
+          <input type="date" id="filterPemakaianStart">
+        </div>
+
+        <div class="filter-group narrow filter-pemakaian_per_bon filter-hidden" id="filterPemakaianEndGroup">
+          <label>Pemakaian - Sampai:</label>
+          <input type="date" id="filterPemakaianEnd">
+        </div>
+
+        <div class="filter-group narrow filter-oli_masuk filter-pemakaian_oli filter-hidden" id="filterStartGroup">
           <label>Dari:</label>
           <input type="date" id="filterStart">
         </div>
 
-        <div class="filter-group narrow filter-hidden" id="filterEndGroup">
+        <div class="filter-group narrow filter-oli_masuk filter-pemakaian_oli filter-hidden" id="filterEndGroup">
           <label>Sampai:</label>
           <input type="date" id="filterEnd">
         </div>

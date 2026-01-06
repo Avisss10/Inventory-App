@@ -968,20 +968,38 @@ app.delete("/pemakaian/:id", (req, res) => {
 // Fungsi: Mengambil data pemakaian sparepart dengan filter vendor untuk laporan detail
 app.get("/pemakaian_vendor", (req, res) => {
     try {
-        let { start, end, vendor, barang, kendaraan } = req.query;
+        // Support two date ranges: masuk_* (barang masuk) and pemakaian_* (tanggal pemakaian)
+        let { start, end, vendor, barang, kendaraan, masuk_start, masuk_end, pemakaian_start, pemakaian_end } = req.query;
 
         const dateRE = /^\d{4}-\d{2}-\d{2}$/;
-        if (start && !dateRE.test(start)) {
-            return res.status(400).json({ error: "start harus format YYYY-MM-DD" });
-        }
-        if (end && !dateRE.test(end)) {
-            return res.status(400).json({ error: "end harus format YYYY-MM-DD" });
-        }
+        // validate each date param if present
+        const checkDate = (label, val) => {
+            if (val && !dateRE.test(val)) {
+                return `${label} harus format YYYY-MM-DD`;
+            }
+            return null;
+        };
 
-        if (start && end && start > end) {
-            const tmp = start;
-            start = end;
-            end = tmp;
+        const errMsg = checkDate('masuk_start', masuk_start) || checkDate('masuk_end', masuk_end) || checkDate('pemakaian_start', pemakaian_start) || checkDate('pemakaian_end', pemakaian_end) || checkDate('start', start) || checkDate('end', end);
+        if (errMsg) return res.status(400).json({ error: errMsg });
+
+        // Legacy compatibility: if masuk_* not provided, fall back to start/end
+        let mStart = masuk_start || start;
+        let mEnd = masuk_end || end;
+        let pStart = pemakaian_start;
+        let pEnd = pemakaian_end;
+
+        // normalize start/end order for masuk
+        if (mStart && mEnd && mStart > mEnd) {
+            const tmp = mStart;
+            mStart = mEnd;
+            mEnd = tmp;
+        }
+        // normalize start/end order for pemakaian
+        if (pStart && pEnd && pStart > pEnd) {
+            const tmp = pStart;
+            pStart = pEnd;
+            pEnd = tmp;
         }
 
         let sql = `
@@ -1007,15 +1025,28 @@ app.get("/pemakaian_vendor", (req, res) => {
 
         const params = [];
 
-        if (start && end) {
+        // Apply masuk (barang masuk) filters if present
+        if (mStart && mEnd) {
             sql += " AND DATE(bm.tgl_sparepart_masuk) BETWEEN ? AND ?";
-            params.push(start, end);
-        } else if (start) {
+            params.push(mStart, mEnd);
+        } else if (mStart) {
             sql += " AND DATE(bm.tgl_sparepart_masuk) = ?";
-            params.push(start);
-        } else if (end) {
+            params.push(mStart);
+        } else if (mEnd) {
             sql += " AND DATE(bm.tgl_sparepart_masuk) = ?";
-            params.push(end);
+            params.push(mEnd);
+        }
+
+        // Apply pemakaian (tanggal pemakaian) filters if present
+        if (pStart && pEnd) {
+            sql += " AND DATE(p.tanggal) BETWEEN ? AND ?";
+            params.push(pStart, pEnd);
+        } else if (pStart) {
+            sql += " AND DATE(p.tanggal) = ?";
+            params.push(pStart);
+        } else if (pEnd) {
+            sql += " AND DATE(p.tanggal) = ?";
+            params.push(pEnd);
         }
 
         if (vendor) {
@@ -2425,16 +2456,29 @@ app.get("/stok_ban", (req, res) => {
 // Fungsi: Rekap pemakaian ban berdasarkan tanggal ban masuk dengan filter tanggal dan vendor
 app.get("/pemakaian_ban_per_masuk", (req, res) => {
     try {
-        let { start, end, vendor } = req.query;
+        let { start, end, vendor, masuk_start, masuk_end, pemakaian_start, pemakaian_end } = req.query;
+
+        // Backwards compatibility: if legacy start/end used, treat as masuk range when masuk_ not provided
+        if ((start || end) && (!masuk_start && !masuk_end)) {
+            masuk_start = start || '';
+            masuk_end = end || '';
+        }
 
         const dateRE = /^\d{4}-\d{2}-\d{2}$/;
-        if (start && !dateRE.test(start)) return res.status(400).json({ error: "start harus format YYYY-MM-DD" });
-        if (end && !dateRE.test(end)) return res.status(400).json({ error: "end harus format YYYY-MM-DD" });
+        if (masuk_start && !dateRE.test(masuk_start)) return res.status(400).json({ error: "masuk_start harus format YYYY-MM-DD" });
+        if (masuk_end && !dateRE.test(masuk_end)) return res.status(400).json({ error: "masuk_end harus format YYYY-MM-DD" });
+        if (pemakaian_start && !dateRE.test(pemakaian_start)) return res.status(400).json({ error: "pemakaian_start harus format YYYY-MM-DD" });
+        if (pemakaian_end && !dateRE.test(pemakaian_end)) return res.status(400).json({ error: "pemakaian_end harus format YYYY-MM-DD" });
 
-        if (start && end && start > end) {
-            const tmp = start;
-            start = end;
-            end = tmp;
+        if (masuk_start && masuk_end && masuk_start > masuk_end) {
+            const tmp = masuk_start;
+            masuk_start = masuk_end;
+            masuk_end = tmp;
+        }
+        if (pemakaian_start && pemakaian_end && pemakaian_start > pemakaian_end) {
+            const tmp = pemakaian_start;
+            pemakaian_start = pemakaian_end;
+            pemakaian_end = tmp;
         }
 
         let sql = `
@@ -2456,15 +2500,28 @@ app.get("/pemakaian_ban_per_masuk", (req, res) => {
     `;
         const params = [];
 
-        if (start && end) {
+        // Apply filters for tanggal masuk (barang masuk)
+        if (masuk_start && masuk_end) {
             sql += " AND DATE(sb.tgl_ban_masuk) BETWEEN ? AND ?";
-            params.push(start, end);
-        } else if (start) {
+            params.push(masuk_start, masuk_end);
+        } else if (masuk_start) {
             sql += " AND DATE(sb.tgl_ban_masuk) = ?";
-            params.push(start);
-        } else if (end) {
+            params.push(masuk_start);
+        } else if (masuk_end) {
             sql += " AND DATE(sb.tgl_ban_masuk) = ?";
-            params.push(end);
+            params.push(masuk_end);
+        }
+
+        // Apply filters for tanggal pemakaian (tanggal pasang ban baru)
+        if (pemakaian_start && pemakaian_end) {
+            sql += " AND DATE(pb.tgl_pasang_ban_baru) BETWEEN ? AND ?";
+            params.push(pemakaian_start, pemakaian_end);
+        } else if (pemakaian_start) {
+            sql += " AND DATE(pb.tgl_pasang_ban_baru) = ?";
+            params.push(pemakaian_start);
+        } else if (pemakaian_end) {
+            sql += " AND DATE(pb.tgl_pasang_ban_baru) = ?";
+            params.push(pemakaian_end);
         }
 
         if (vendor) {
@@ -3337,67 +3394,114 @@ app.get("/rekap/pemakaian_oli", (req, res) => {
 // Page: rekapoli.html | JS: js/literan/rekapoli.js
 // Fungsi: Rekap pemakaian oli berdasarkan tanggal barang masuk dengan filter
 app.get("/rekap/pemakaian_per_bon", (req, res) => {
-    const { start, end, vendor, nama_oli, no_seri, kendaraan } = req.query;
+    try {
+        // Support two date ranges: masuk_* (tanggal masuk oli) and pemakaian_* (tanggal pemakaian)
+        let { start, end, vendor, nama_oli, no_seri, kendaraan, masuk_start, masuk_end, pemakaian_start, pemakaian_end } = req.query;
 
-    let sql = `
-    SELECT
-      po.id,
-      om.tanggal_masuk AS tanggal_masuk,
-      om.no_seri,
-      om.nama_oli,
-      v.nama_vendor,
-      CONCAT(k.dt_mobil, ' - ', k.plat) AS kendaraan,
-      po.jumlah_pakai,
-      om.harga,
-      (po.jumlah_pakai * om.harga) AS total,
-      po.keterangan,
-      po.tanggal_pakai AS tanggal_pemakaian,
-      om.id_vendor,
-      po.id_kendaraan
-    FROM pemakaian_oli po
-    JOIN oli_masuk om ON po.id_oli_masuk = om.id
-    LEFT JOIN vendor v ON om.id_vendor = v.id
-    LEFT JOIN kendaraan k ON po.id_kendaraan = k.id
-    WHERE 1=1
-  `;
+        const dateRE = /^\d{4}-\d{2}-\d{2}$/;
+        const checkDate = (label, val) => {
+            if (val && !dateRE.test(val)) return `${label} harus format YYYY-MM-DD`;
+            return null;
+        };
 
-    const params = [];
+        const errMsg = checkDate('masuk_start', masuk_start) || checkDate('masuk_end', masuk_end) || checkDate('pemakaian_start', pemakaian_start) || checkDate('pemakaian_end', pemakaian_end) || checkDate('start', start) || checkDate('end', end);
+        if (errMsg) return res.status(400).json({ error: errMsg });
 
-    // Filter berdasarkan tanggal barang masuk
-    if (start && end) {
-        sql += ` AND DATE(om.tanggal_masuk) BETWEEN ? AND ?`;
-        params.push(start, end);
-    }
+        // Legacy fallback: if masuk_* not provided, use start/end
+        let mStart = masuk_start || start;
+        let mEnd = masuk_end || end;
+        let pStart = pemakaian_start;
+        let pEnd = pemakaian_end;
 
-    if (vendor) {
-        sql += ` AND om.id_vendor = ?`;
-        params.push(vendor);
-    }
-
-    if (nama_oli) {
-        sql += ` AND om.nama_oli LIKE ?`;
-        params.push(`%${nama_oli}%`);
-    }
-
-    if (no_seri) {
-        sql += ` AND om.no_seri LIKE ?`;
-        params.push(`%${no_seri}%`);
-    }
-
-    if (kendaraan) {
-        sql += ` AND po.id_kendaraan = ?`;
-        params.push(kendaraan);
-    }
-
-    sql += ` ORDER BY om.tanggal_masuk DESC, po.tanggal_pakai DESC, po.id DESC`;
-
-    db.query(sql, params, (err, results) => {
-        if (err) {
-            console.error("Error /rekap/pemakaian_per_bon GET:", err);
-            return res.status(500).json({ error: err.sqlMessage || err.message });
+        // normalize order
+        if (mStart && mEnd && mStart > mEnd) {
+            const tmp = mStart; mStart = mEnd; mEnd = tmp;
         }
-        res.json(results);
-    });
+        if (pStart && pEnd && pStart > pEnd) {
+            const tmp = pStart; pStart = pEnd; pEnd = tmp;
+        }
+
+        let sql = `
+        SELECT
+          po.id,
+          om.tanggal_masuk AS tanggal_masuk,
+          om.no_seri,
+          om.nama_oli,
+          v.nama_vendor,
+          CONCAT(k.dt_mobil, ' - ', k.plat) AS kendaraan,
+          po.jumlah_pakai,
+          om.harga,
+          (po.jumlah_pakai * om.harga) AS total,
+          po.keterangan,
+          po.tanggal_pakai AS tanggal_pemakaian,
+          om.id_vendor,
+          po.id_kendaraan
+        FROM pemakaian_oli po
+        JOIN oli_masuk om ON po.id_oli_masuk = om.id
+        LEFT JOIN vendor v ON om.id_vendor = v.id
+        LEFT JOIN kendaraan k ON po.id_kendaraan = k.id
+        WHERE 1=1
+      `;
+
+        const params = [];
+
+        // Apply Masuk (tanggal masuk oli) filters
+        if (mStart && mEnd) {
+            sql += ` AND DATE(om.tanggal_masuk) BETWEEN ? AND ?`;
+            params.push(mStart, mEnd);
+        } else if (mStart) {
+            sql += ` AND DATE(om.tanggal_masuk) = ?`;
+            params.push(mStart);
+        } else if (mEnd) {
+            sql += ` AND DATE(om.tanggal_masuk) = ?`;
+            params.push(mEnd);
+        }
+
+        // Apply Pemakaian (tanggal pemakaian) filters
+        if (pStart && pEnd) {
+            sql += ` AND DATE(po.tanggal_pakai) BETWEEN ? AND ?`;
+            params.push(pStart, pEnd);
+        } else if (pStart) {
+            sql += ` AND DATE(po.tanggal_pakai) = ?`;
+            params.push(pStart);
+        } else if (pEnd) {
+            sql += ` AND DATE(po.tanggal_pakai) = ?`;
+            params.push(pEnd);
+        }
+
+        if (vendor) {
+            sql += ` AND om.id_vendor = ?`;
+            params.push(vendor);
+        }
+
+        if (nama_oli) {
+            sql += ` AND om.nama_oli LIKE ?`;
+            params.push(`%${nama_oli}%`);
+        }
+
+        if (no_seri) {
+            sql += ` AND om.no_seri LIKE ?`;
+            params.push(`%${no_seri}%`);
+        }
+
+        if (kendaraan) {
+            sql += ` AND po.id_kendaraan = ?`;
+            params.push(kendaraan);
+        }
+
+        sql += ` ORDER BY om.tanggal_masuk DESC, po.tanggal_pakai DESC, po.id DESC`;
+
+        db.query(sql, params, (err, results) => {
+            if (err) {
+                console.error("Error /rekap/pemakaian_per_bon GET:", err);
+                return res.status(500).json({ error: err.sqlMessage || err.message });
+            }
+            res.json(results);
+        });
+    } catch (err) {
+        console.error("Exception /rekap/pemakaian_per_bon GET:", err);
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // ========================================

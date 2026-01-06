@@ -104,6 +104,43 @@
           <input type="text" id="vendorFilterPemakaianPerMasuk" placeholder="Ketik untuk mencari Vendor..." list="vendorListPemakaianPerMasuk">
           <datalist id="vendorListPemakaianPerMasuk"></datalist>
         </div>
+
+        <div class="filter-group">
+          <label>Periode Tanggal Masuk:</label>
+          <select id="filterMasukTypePemakaian">
+            <option value="hari">Hari Ini</option>
+            <option value="minggu">7 Hari Terakhir</option>
+            <option value="bulan">Bulan Ini</option>
+            <option value="manual">Tanggal Manual</option>
+          </select>
+        </div>
+        <div class="filter-group narrow" id="filterMasukStartGroupPemakaian" style="display: none;">
+          <label>Dari:</label>
+          <input type="date" id="filterMasukStartPemakaian">
+        </div>
+        <div class="filter-group narrow" id="filterMasukEndGroupPemakaian" style="display: none;">
+          <label>Sampai:</label>
+          <input type="date" id="filterMasukEndPemakaian">
+        </div>
+
+        <div class="filter-group">
+          <label>Periode Tanggal Pemakaian:</label>
+          <select id="filterPemakaianTypePemakaian">
+            <option value="hari">Hari Ini</option>
+            <option value="minggu">7 Hari Terakhir</option>
+            <option value="bulan">Bulan Ini</option>
+            <option value="manual">Tanggal Manual</option>
+          </select>
+        </div>
+        <div class="filter-group narrow" id="filterPemakaianStartGroupPemakaian" style="display: none;">
+          <label>Dari:</label>
+          <input type="date" id="filterPemakaianStartPemakaian">
+        </div>
+        <div class="filter-group narrow" id="filterPemakaianEndGroupPemakaian" style="display: none;">
+          <label>Sampai:</label>
+          <input type="date" id="filterPemakaianEndPemakaian">
+        </div>
+
         <div class="button-group">
           <button type="submit">Terapkan Filter</button>
           <button type="button" id="resetFilterPemakaianPerMasuk" class="btn-reset">Reset</button>

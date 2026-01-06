@@ -489,33 +489,57 @@ async function applyFilterDataKendaraan() {
     }
 
     async function applyFilterPemakaianPerMasuk() {
-      const filterType = document.getElementById("filterType").value;
-      let startDate = document.getElementById("filterStart").value;
-      let endDate = document.getElementById("filterEnd").value;
+      const masukFilterType = document.getElementById("filterMasukTypePemakaian").value;
+      let masukStart = document.getElementById("filterMasukStartPemakaian").value;
+      let masukEnd = document.getElementById("filterMasukEndPemakaian").value;
 
-      if (filterType === 'manual' && (!startDate || !endDate)) {
-        alert("Harap isi tanggal mulai dan selesai untuk filter manual!");
-        showEmpty('pemakaian_per_masuk', "Silakan isi tanggal terlebih dahulu");
+      if (masukFilterType === 'manual' && (!masukStart || !masukEnd)) {
+        alert("Harap isi tanggal mulai dan selesai untuk filter Tanggal Masuk (Manual)!");
+        showEmpty('pemakaian_per_masuk', "Silakan isi tanggal Masuk terlebih dahulu");
         return;
       }
 
-      const dateRange = getDateRange(filterType, startDate, endDate);
-      startDate = dateRange.startDate;
-      endDate = dateRange.endDate;
+      const masukRange = getDateRange(masukFilterType, masukStart, masukEnd);
+      masukStart = masukRange.startDate;
+      masukEnd = masukRange.endDate;
 
-        const vendorNama = document.getElementById("vendorFilterPemakaianPerMasuk").value.trim();
-        const vendorId = vendorNama ? vendorNameToId[vendorNama] : '';
+      const pemakaianFilterType = document.getElementById("filterPemakaianTypePemakaian").value;
+      let pemakaianStart = document.getElementById("filterPemakaianStartPemakaian").value;
+      let pemakaianEnd = document.getElementById("filterPemakaianEndPemakaian").value;
+
+      if (pemakaianFilterType === 'manual' && (!pemakaianStart || !pemakaianEnd)) {
+        alert("Harap isi tanggal mulai dan selesai untuk filter Tanggal Pemakaian (Manual)!");
+        showEmpty('pemakaian_per_masuk', "Silakan isi tanggal Pemakaian terlebih dahulu");
+        return;
+      }
+
+      const pemakaianRange = getDateRange(pemakaianFilterType, pemakaianStart, pemakaianEnd);
+      pemakaianStart = pemakaianRange.startDate;
+      pemakaianEnd = pemakaianRange.endDate;
+
+      const vendorNama = document.getElementById("vendorFilterPemakaianPerMasuk").value.trim();
+      const vendorId = vendorNama ? vendorNameToId[vendorNama] : '';
 
       currentFilter = {
-        startDate,
-        endDate,
+        masukStart,
+        masukEnd,
+        masukFilterType,
+        pemakaianStart,
+        pemakaianEnd,
+        pemakaianFilterType,
         vendor: vendorId,
-        filterType,
         vendorNama: vendorNama,
         reportType: 'pemakaian_per_masuk'
       };
 
-      const res = await fetch(`http://localhost:3000/pemakaian_ban_per_masuk?start=${startDate}&end=${endDate}&vendor=${vendorId}`);
+      const params = new URLSearchParams();
+      if (masukStart) params.append('masuk_start', masukStart);
+      if (masukEnd) params.append('masuk_end', masukEnd);
+      if (pemakaianStart) params.append('pemakaian_start', pemakaianStart);
+      if (pemakaianEnd) params.append('pemakaian_end', pemakaianEnd);
+      if (vendorId) params.append('vendor', vendorId);
+
+      const res = await fetch(`http://localhost:3000/pemakaian_ban_per_masuk?${params.toString()}`);
       const data = await res.json();
       renderTablePemakaianPerMasuk(data);
     }
@@ -572,12 +596,23 @@ async function applyFilterDataKendaraan() {
           if (currentFilter.vendorNama) {
             filters.push(['Vendor', currentFilter.vendorNama]);
           }
-          if (currentFilter.startDate && currentFilter.endDate) {
-            const filterLabel = getFilterLabel(currentFilter.filterType);
-            filters.push(['Periode', filterLabel]);
-            filters.push(['Tanggal', currentFilter.startDate === currentFilter.endDate 
-              ? currentFilter.startDate 
-              : `${currentFilter.startDate} s/d ${currentFilter.endDate}`]);
+          if (currentFilter.masukFilterType) {
+            const masukLabel = getFilterLabel(currentFilter.masukFilterType);
+            filters.push(['Periode Tanggal Masuk', masukLabel]);
+            if (currentFilter.masukStart && currentFilter.masukEnd) {
+              filters.push(['Tanggal Masuk', currentFilter.masukStart === currentFilter.masukEnd
+                ? currentFilter.masukStart
+                : `${currentFilter.masukStart} s/d ${currentFilter.masukEnd}`]);
+            }
+          }
+          if (currentFilter.pemakaianFilterType) {
+            const pakaiLabel = getFilterLabel(currentFilter.pemakaianFilterType);
+            filters.push(['Periode Tanggal Pemakaian', pakaiLabel]);
+            if (currentFilter.pemakaianStart && currentFilter.pemakaianEnd) {
+              filters.push(['Tanggal Pemakaian', currentFilter.pemakaianStart === currentFilter.pemakaianEnd
+                ? currentFilter.pemakaianStart
+                : `${currentFilter.pemakaianStart} s/d ${currentFilter.pemakaianEnd}`]);
+            }
           }
         }
         
@@ -634,10 +669,11 @@ async function applyFilterDataKendaraan() {
           if (currentFilter.vendorNama) {
             parts.push(currentFilter.vendorNama.replace(/\s+/g, '_'));
           }
-          if (currentFilter.startDate && currentFilter.endDate) {
-            parts.push(currentFilter.startDate === currentFilter.endDate 
-              ? currentFilter.startDate 
-              : `${currentFilter.startDate}_sd_${currentFilter.endDate}`);
+          if (currentFilter.masukStart && currentFilter.masukEnd) {
+            parts.push(`Masuk_${currentFilter.masukStart === currentFilter.masukEnd ? currentFilter.masukStart : `${currentFilter.masukStart}_sd_${currentFilter.masukEnd}`}`);
+          }
+          if (currentFilter.pemakaianStart && currentFilter.pemakaianEnd) {
+            parts.push(`Pemakaian_${currentFilter.pemakaianStart === currentFilter.pemakaianEnd ? currentFilter.pemakaianStart : `${currentFilter.pemakaianStart}_sd_${currentFilter.pemakaianEnd}`}`);
           }
         }
         
@@ -1112,7 +1148,8 @@ async function applyFilterDataKendaraan() {
         reportType === 'pemakaian_per_masuk' ? '' : 'none';
 
       // Show/Hide Date Filters
-      if (reportType === 'data_kendaraan' || reportType === 'stok') {
+      if (reportType === 'data_kendaraan' || reportType === 'stok' || reportType === 'pemakaian_per_masuk') {
+        // For pemakaian per masuk we use the dedicated Masuk/Pemakaian filters instead
         filterTypeGroup.style.display = 'none';
         startDateGroup.style.display = 'none';
         endDateGroup.style.display = 'none';
@@ -1149,6 +1186,40 @@ async function applyFilterDataKendaraan() {
       }
     });
 
+    // Masuk filter type change (Pemakaian per Masuk)
+    const masukTypeEl = document.getElementById('filterMasukTypePemakaian');
+    if (masukTypeEl) {
+      masukTypeEl.addEventListener('change', function() {
+        const val = this.value;
+        const startGroup = document.getElementById('filterMasukStartGroupPemakaian');
+        const endGroup = document.getElementById('filterMasukEndGroupPemakaian');
+        if (val === 'manual') {
+          startGroup.style.display = 'flex';
+          endGroup.style.display = 'flex';
+        } else {
+          startGroup.style.display = 'none';
+          endGroup.style.display = 'none';
+        }
+      });
+    }
+
+    // Pemakaian filter type change (Pemakaian per Masuk)
+    const pakaiTypeEl = document.getElementById('filterPemakaianTypePemakaian');
+    if (pakaiTypeEl) {
+      pakaiTypeEl.addEventListener('change', function() {
+        const val = this.value;
+        const startGroup = document.getElementById('filterPemakaianStartGroupPemakaian');
+        const endGroup = document.getElementById('filterPemakaianEndGroupPemakaian');
+        if (val === 'manual') {
+          startGroup.style.display = 'flex';
+          endGroup.style.display = 'flex';
+        } else {
+          startGroup.style.display = 'none';
+          endGroup.style.display = 'none';
+        }
+      });
+    }
+
     // Form Submit Handler
     document.getElementById("filterForm").addEventListener("submit", (e) => {
       e.preventDefault();
@@ -1177,7 +1248,21 @@ async function applyFilterDataKendaraan() {
 
     document.getElementById("resetFilterPemakaianPerMasuk").addEventListener("click", () => {
       document.getElementById("vendorFilterPemakaianPerMasuk").value = "";
-      resetDateFilters();
+      // reset pemakaian per masuk specific filters
+      if (document.getElementById('filterMasukTypePemakaian')) {
+        document.getElementById('filterMasukTypePemakaian').value = 'hari';
+        document.getElementById('filterMasukStartPemakaian').value = '';
+        document.getElementById('filterMasukEndPemakaian').value = '';
+        document.getElementById('filterMasukStartGroupPemakaian').style.display = 'none';
+        document.getElementById('filterMasukEndGroupPemakaian').style.display = 'none';
+      }
+      if (document.getElementById('filterPemakaianTypePemakaian')) {
+        document.getElementById('filterPemakaianTypePemakaian').value = 'hari';
+        document.getElementById('filterPemakaianStartPemakaian').value = '';
+        document.getElementById('filterPemakaianEndPemakaian').value = '';
+        document.getElementById('filterPemakaianStartGroupPemakaian').style.display = 'none';
+        document.getElementById('filterPemakaianEndGroupPemakaian').style.display = 'none';
+      }
       applyFilter();
     });
 
@@ -1212,6 +1297,22 @@ async function applyFilterDataKendaraan() {
       document.getElementById("merkBanFilter").value = "";
       document.getElementById("kendaraanFilterData").value = "";
       document.getElementById("vendorFilterPemakaianPerMasuk").value = "";
+
+      // Reset Pemakaian Per Masuk specific filters
+      if (document.getElementById('filterMasukTypePemakaian')) {
+        document.getElementById('filterMasukTypePemakaian').value = 'hari';
+        document.getElementById('filterMasukStartPemakaian').value = '';
+        document.getElementById('filterMasukEndPemakaian').value = '';
+        document.getElementById('filterMasukStartGroupPemakaian').style.display = 'none';
+        document.getElementById('filterMasukEndGroupPemakaian').style.display = 'none';
+      }
+      if (document.getElementById('filterPemakaianTypePemakaian')) {
+        document.getElementById('filterPemakaianTypePemakaian').value = 'hari';
+        document.getElementById('filterPemakaianStartPemakaian').value = '';
+        document.getElementById('filterPemakaianEndPemakaian').value = '';
+        document.getElementById('filterPemakaianStartGroupPemakaian').style.display = 'none';
+        document.getElementById('filterPemakaianEndGroupPemakaian').style.display = 'none';
+      }
     }
 
     // ============================================
@@ -1226,7 +1327,19 @@ async function applyFilterDataKendaraan() {
       document.getElementById("filterType").value = "hari";
       document.getElementById('filterStartGroup').style.display = 'none';
       document.getElementById('filterEndGroup').style.display = 'none';
-      
+
+      // Initialize pemakaian per masuk filters (if present)
+      if (document.getElementById('filterMasukTypePemakaian')) {
+        document.getElementById('filterMasukTypePemakaian').value = 'hari';
+        document.getElementById('filterMasukStartGroupPemakaian').style.display = 'none';
+        document.getElementById('filterMasukEndGroupPemakaian').style.display = 'none';
+      }
+      if (document.getElementById('filterPemakaianTypePemakaian')) {
+        document.getElementById('filterPemakaianTypePemakaian').value = 'hari';
+        document.getElementById('filterPemakaianStartGroupPemakaian').style.display = 'none';
+        document.getElementById('filterPemakaianEndGroupPemakaian').style.display = 'none';
+      }
+
       // Load Initial Data
       applyFilter();
     });
