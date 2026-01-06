@@ -1,11 +1,11 @@
     const API_BASE_URL = 'http://localhost:3000';
     
     const CONFIG = {
-      columnCounts: { stok: 9, kendaraan: 11, vendor: 8, pemakaian_vendor: 11 },
+      columnCounts: { stok: 9, kendaraan: 11, vendor: 9, pemakaian_vendor: 11 },
       headers: {
         stok: ['No', 'No Seri', 'Nama Sparepart', 'Jumlah', 'Satuan', 'Harga Satuan', 'Total', 'Vendor', 'Tanggal'],
         kendaraan: ['No', 'Tanggal', 'Kendaraan', 'Nama Barang', 'Jumlah', 'Satuan', 'Harga Satuan', 'Total', 'Vendor', 'Penanggung Jawab', 'No Seri / Keterangan'],
-        vendor: ['No', 'Tanggal', 'Vendor', 'Nama Barang', 'Jumlah', 'Satuan', 'Harga Satuan', 'Total'],
+        vendor: ['No', 'Tanggal', 'Vendor', 'No Seri', 'Nama Barang', 'Jumlah', 'Satuan', 'Harga Satuan', 'Total'],
         pemakaian_vendor: ['No', 'Tanggal Masuk', 'No Seri', 'Nama Barang', 'Jumlah', 'Satuan', 'Harga Satuan', 'Total', 'Vendor', 'Kendaraan', 'Tanggal Pemakaian']
       },
       titles: {
@@ -363,6 +363,7 @@
             <td>${idx + 1}</td>
             <td>${utils.formatDate(row.tanggal)}</td>
             <td style="text-align: left;">${row.nama_vendor || '-'}</td>
+            <td>${row.no_seri || '-'}</td>
             <td style="text-align: left;">${row.nama_sparepart || row.nama_barang || ''}</td>
             <td>${qty}</td>
             <td>${row.satuan || ''}</td>
@@ -596,6 +597,7 @@
               idx + 1,
               utils.formatDate(row.tanggal),
               row.nama_vendor || '-',
+              row.no_seri || '-',
               row.nama_sparepart || row.nama_barang,
               qty,
               row.satuan,
@@ -724,6 +726,7 @@
               idx + 1,
               utils.formatDate(row.tanggal),
               row.nama_vendor || '-',
+              row.no_seri || '-',
               row.nama_sparepart || row.nama_barang,
               qty,
               row.satuan,
