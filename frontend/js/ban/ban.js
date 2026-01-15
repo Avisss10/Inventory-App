@@ -17,7 +17,7 @@
 
     // ===== LOAD VENDOR =====
     async function loadVendors() {
-        const res = await fetch("http://localhost:3000/vendor");
+        const res = await fetch("http://localhost:3000/api/vendor");
         const data = await res.json();
         const vendorList = document.getElementById("vendorList");
         vendorList.innerHTML = '';
@@ -32,7 +32,7 @@
 
     // ===== LOAD BAN =====
     async function loadBan() {
-        const res = await fetch("http://localhost:3000/ban/tersedia");
+        const res = await fetch("http://localhost:3000/api/ban/tersedia");
         let data = await res.json();
         if (!Array.isArray(data)) data = [];
         banData = data;
@@ -176,7 +176,7 @@
             id_vendor: vendorObj.id
         };
 
-        let url = "http://localhost:3000/ban";
+        let url = "http://localhost:3000/api/ban";
         let method = "POST";
         if (id) { url += "/" + id; method = "PUT"; }
 
@@ -223,7 +223,7 @@
     // ===== DELETE =====
     async function deleteBan(id) {
         if (!confirm("Yakin ingin menghapus data ban ini?")) return;
-        const res = await fetch(`http://localhost:3000/ban/${id}`, { method: "DELETE" });
+        const res = await fetch(`http://localhost:3000/api/ban/${id}`, { method: "DELETE" });
         const result = await res.json();
         alert(result.message);
         loadBan();

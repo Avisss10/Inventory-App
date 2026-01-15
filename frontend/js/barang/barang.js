@@ -179,7 +179,7 @@
       
       if (confirm('Simpan semua data ke database?')) {
         for (let d of reviewData) {
-          await fetch("http://localhost:3000/barang", {
+          await fetch("http://localhost:3000/api/barang", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(d)
@@ -193,7 +193,7 @@
 
     async function loadDatalistData() {
       try {
-        const vendorRes = await fetch("http://localhost:3000/vendor");
+        const vendorRes = await fetch("http://localhost:3000/api/vendor");
         const vendors = await vendorRes.json();
         const vendorList = document.getElementById("vendorList");
         vendorList.innerHTML = "";
@@ -205,7 +205,7 @@
           vendorMap[v.id] = v.nama_vendor;
         });
 
-        const kendaraanRes = await fetch("http://localhost:3000/kendaraan");
+        const kendaraanRes = await fetch("http://localhost:3000/api/kendaraan");
         const kendaraans = await kendaraanRes.json();
         const kendaraanList = document.getElementById("kendaraanList");
         kendaraanList.innerHTML = "";

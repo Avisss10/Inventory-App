@@ -13,7 +13,7 @@
         // Ambil data vendor dari API
         async function loadVendors() {
             try {
-                const res = await fetch('http://localhost:3000/vendor');
+                const res = await fetch('http://localhost:3000/api/vendor');
                 const data = await res.json();
                 vendorsData = data;
                 renderTable();
@@ -108,14 +108,14 @@
                 let res;
                 if (id) {
                     // Update vendor
-                    res = await fetch(`http://localhost:3000/vendor/${id}`, {
+                    res = await fetch(`http://localhost:3000/api/vendor/${id}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ nama_vendor })
                     });
                 } else {
                     // Tambah vendor
-                    res = await fetch('http://localhost:3000/vendor', {
+                    res = await fetch('http://localhost:3000/api/vendor', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ nama_vendor })
@@ -157,7 +157,7 @@
             if (!confirm("Yakin ingin menghapus vendor ini?")) return;
 
             try {
-                const res = await fetch(`http://localhost:3000/vendor/${id}`, {
+                const res = await fetch(`http://localhost:3000/api/vendor/${id}`, {
                     method: 'DELETE'
                 });
                 const result = await res.json();

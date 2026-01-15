@@ -26,7 +26,7 @@ let reviewData = [];
     async function loadDatalistData() {
       try {
         // ambil sparepart
-        const sparepartRes = await fetch("http://localhost:3000/stok_sparepart");
+        const sparepartRes = await fetch("http://localhost:3000/api/stok_sparepart");
         const spareparts = await sparepartRes.json();
         allSpareparts = spareparts.filter(s => parseFloat(s.jumlah || 0) > 0);
 
@@ -56,7 +56,7 @@ let reviewData = [];
         });
 
         // ambil kendaraan
-        const kendaraanRes = await fetch("http://localhost:3000/kendaraan");
+        const kendaraanRes = await fetch("http://localhost:3000/api/kendaraan");
         const kendaraans = await kendaraanRes.json();
         const kendaraanList = document.getElementById("kendaraanList");
         kendaraanList.innerHTML = "";
@@ -289,7 +289,7 @@ let reviewData = [];
 
       try {
         for (let d of reviewData) {
-          await fetch("http://localhost:3000/pemakaian", {
+          await fetch("http://localhost:3000/api/pemakaian", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(d)

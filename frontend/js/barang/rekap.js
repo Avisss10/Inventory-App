@@ -12,7 +12,7 @@
       // Ambil daftar barang untuk autocomplete
       async function loadBarangList() {
         try {
-          const res = await fetch("http://localhost:3000/barang");
+          const res = await fetch("http://localhost:3000/api/barang");
           const barangs = await res.json();
           const barangList = document.getElementById("barangList");
           barangList.innerHTML = "";
@@ -30,7 +30,7 @@
       // Ambil data vendor & kendaraan
       async function loadFilters() {
         try {
-          const vendorRes = await fetch("http://localhost:3000/vendor");
+          const vendorRes = await fetch("http://localhost:3000/api/vendor");
           const vendors = await vendorRes.json();
           const vendorSelect = document.getElementById("vendorFilter");
           vendorSelect.innerHTML = '<option value="">Semua Vendor</option>';
@@ -42,7 +42,7 @@
             vendorMap[v.id] = v.nama_vendor;
           });
 
-          const kendaraanRes = await fetch("http://localhost:3000/kendaraan");
+          const kendaraanRes = await fetch("http://localhost:3000/api/kendaraan");
           const kendaraans = await kendaraanRes.json();
           const kendaraanList = document.getElementById("kendaraanFilterList");
           kendaraanList.innerHTML = "";
@@ -139,7 +139,7 @@
         };
 
         try {
-          const res = await fetch(`http://localhost:3000/rekap_lama?start=${startDate}&end=${endDate}&vendor=${vendorId}&kendaraan=${kendaraanId}&barang=${barang}`);
+          const res = await fetch(`http://localhost:3000/api/rekap_lama?start=${startDate}&end=${endDate}&vendor=${vendorId}&kendaraan=${kendaraanId}&barang=${barang}`);
           const data = await res.json();
           renderTable(data);
         } catch (error) {
@@ -168,7 +168,7 @@
         currentFilter = { startDate, endDate, vendor:"", kendaraan:"", barang:"", filterType:"hari", vendorNama:"", kendaraanLabel:"" };
 
         try {
-          const res = await fetch(`http://localhost:3000/rekap_lama?start=${startDate}&end=${endDate}`);
+          const res = await fetch(`http://localhost:3000/api/rekap_lama?start=${startDate}&end=${endDate}`);
           const data = await res.json();
           renderTable(data);
         } catch (error) {

@@ -24,7 +24,7 @@
     // ===== LOAD DATA =====
     async function loadDatalistData() {
       try {
-        const oliRes = await fetch("http://localhost:3000/stok_oli");
+        const oliRes = await fetch("http://localhost:3000/api/stok_oli");
         const oliData = await oliRes.json();
         allOli = oliData.filter(o => parseFloat(o.total_stok || 0) > 0);
 
@@ -55,7 +55,7 @@
           originalStockMap[key] = parseFloat(o.total_stok) || 0;
         });
 
-        const kendaraanRes = await fetch("http://localhost:3000/kendaraan");
+        const kendaraanRes = await fetch("http://localhost:3000/api/kendaraan");
         const kendaraans = await kendaraanRes.json();
         const kendaraanList = document.getElementById("kendaraanList");
         kendaraanList.innerHTML = "";
@@ -272,7 +272,7 @@
 
       try {
         for (let d of reviewData) {
-          await fetch("http://localhost:3000/pemakaian_oli", {
+          await fetch("http://localhost:3000/api/pemakaian_oli", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({

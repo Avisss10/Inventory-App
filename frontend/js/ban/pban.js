@@ -58,22 +58,22 @@ const scrollToForm = () => {
 // ============================================================================
 const api = {
   async fetchKendaraan() {
-    const response = await fetch("http://localhost:3000/kendaraan");
+    const response = await fetch("http://localhost:3000/api/kendaraan");
     return await response.json();
   },
 
   async fetchBanTersedia() {
-    const response = await fetch("http://localhost:3000/ban");
+    const response = await fetch("http://localhost:3000/api/ban");
     return await response.json();
   },
 
   async fetchPenukaranBan() {
-    const response = await fetch("http://localhost:3000/pban/all");
+    const response = await fetch("http://localhost:3000/api/pban/all");
     return await response.json();
   },
 
   async updatePenukaranBan(id, data) {
-    const response = await fetch(`http://localhost:3000/pban/${id}`, {
+    const response = await fetch(`http://localhost:3000/api/pban/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data)
@@ -82,7 +82,7 @@ const api = {
   },
 
   async updatePenukaranBanEdit(id, data) {
-    const response = await fetch(`http://localhost:3000/pban/edit/${id}`, {
+    const response = await fetch(`http://localhost:3000/api/pban/edit/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data)
@@ -91,7 +91,7 @@ const api = {
   },
 
   async createPenukaranBan(data) {
-    const response = await fetch(`http://localhost:3000/pban`, {
+    const response = await fetch(`http://localhost:3000/api/pban`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data)

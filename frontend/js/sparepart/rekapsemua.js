@@ -1,4 +1,4 @@
-    const API_BASE_URL = 'http://localhost:3000';
+    const API_BASE_URL = 'http://localhost:3000/api';
     
     const CONFIG = {
       columnCounts: { stok: 9, kendaraan: 11, vendor: 9, pemakaian_vendor: 11 },

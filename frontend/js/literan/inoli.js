@@ -89,7 +89,7 @@
         const loadingDiv = document.getElementById("loading-vendors");
         loadingDiv.style.display = 'block';
         try {
-            const res = await fetch("http://localhost:3000/vendor");
+            const res = await fetch("http://localhost:3000/api/vendor");
             if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
             const data = await res.json();
             const vendorList = document.getElementById("vendorList");
@@ -112,7 +112,7 @@
     // ===== LOAD OLD OLI OPTIONS =====
     async function loadOldOliOptions() {
         try {
-            const res = await fetch("http://localhost:3000/oli_masuk");
+            const res = await fetch("http://localhost:3000/api/oli_masuk");
             let data = await res.json();
             if (!Array.isArray(data)) data = [];
             
@@ -193,7 +193,7 @@
 
     // ===== LOAD OLI MASUK =====
     async function loadOli() {
-        const res = await fetch("http://localhost:3000/oli_masuk");
+        const res = await fetch("http://localhost:3000/api/oli_masuk");
         let data = await res.json();
         if (!Array.isArray(data)) data = [];
         // Filter data agar hanya menampilkan yang id_oli_baru masih null
@@ -367,7 +367,7 @@
             keterangan: keteranganInput.value || null
         };
 
-        let url = "http://localhost:3000/oli_masuk";
+        let url = "http://localhost:3000/api/oli_masuk";
         let method = "POST";
         if (id) { 
             url += "/" + id; 
@@ -404,7 +404,7 @@
     // ===== EDIT =====
     async function editOli(id) {
         try {
-            const res = await fetch(`http://localhost:3000/oli_masuk/${id}`);
+            const res = await fetch(`http://localhost:3000/api/oli_masuk/${id}`);
             if (!res.ok) {
                 alert("Gagal mengambil data untuk edit");
                 return;
@@ -500,7 +500,7 @@
     // ===== DELETE =====
     async function deleteOli(id) {
         try {
-            const res = await fetch(`http://localhost:3000/oli_masuk/${id}`);
+            const res = await fetch(`http://localhost:3000/api/oli_masuk/${id}`);
             if (!res.ok) {
                 alert("Gagal mengambil data untuk konfirmasi penghapusan");
                 return;
@@ -533,7 +533,7 @@
 
             if (!confirm(message)) return;
 
-            const deleteRes = await fetch(`http://localhost:3000/oli_masuk/${id}`, { method: "DELETE" });
+            const deleteRes = await fetch(`http://localhost:3000/api/oli_masuk/${id}`, { method: "DELETE" });
             const result = await deleteRes.json();
             
             if (deleteRes.ok) {

@@ -13,7 +13,7 @@
     // ============================================
     async function loadVendors() {
       try {
-        const res = await fetch("http://localhost:3000/vendor");
+        const res = await fetch("http://localhost:3000/api/vendor");
         const vendors = await res.json();
         
         // Populate datalists untuk semua vendor filter
@@ -52,7 +52,7 @@
 
     async function loadKendaraan() {
       try {
-        const res = await fetch("http://localhost:3000/kendaraan");
+        const res = await fetch("http://localhost:3000/api/kendaraan");
         const kendaraans = await res.json();
         const kendaraanList = document.getElementById("kendaraanFilterList");
         const kendaraanListData = document.getElementById("kendaraanFilterListData");
@@ -414,7 +414,7 @@
         reportType: 'penukaran'
       };
 
-      const res = await fetch(`http://localhost:3000/rekap_ban?start=${startDate}&end=${endDate}&vendor=${vendorId}&kendaraan=${kendaraanId}`);
+      const res = await fetch(`http://localhost:3000/api/rekap_ban?start=${startDate}&end=${endDate}&vendor=${vendorId}&kendaraan=${kendaraanId}`);
       const data = await res.json();
       renderTablePenukaran(data);
     }
@@ -433,7 +433,7 @@ async function applyFilterDataKendaraan() {
     reportType: 'data_kendaraan'
   };
 
-  const res = await fetch(`http://localhost:3000/data_kendaraan?kendaraan=${encodeURIComponent(kendaraanParam)}`);
+  const res = await fetch(`http://localhost:3000/api/data_kendaraan?kendaraan=${encodeURIComponent(kendaraanParam)}`);
   const data = await res.json();
   renderTableDataKendaraan(data);
 }
@@ -483,7 +483,7 @@ async function applyFilterDataKendaraan() {
         endpoint = 'stok_ban';
       }
 
-      const res = await fetch(`http://localhost:3000/${endpoint}?start=${startDate}&end=${endDate}&vendor=${vendorId}&merkBan=${merkBan}`);
+      const res = await fetch(`http://localhost:3000/api/${endpoint}?start=${startDate}&end=${endDate}&vendor=${vendorId}&merkBan=${merkBan}`);
       const data = await res.json();
       renderTableStok(data);
     }
@@ -547,7 +547,7 @@ async function applyFilterDataKendaraan() {
       if (vendorId) params.append('vendor', vendorId);
       if (merkBan) params.append('merkBan', merkBan);
 
-      const res = await fetch(`http://localhost:3000/pemakaian_ban_per_masuk?${params.toString()}`);
+      const res = await fetch(`http://localhost:3000/api/pemakaian_ban_per_masuk?${params.toString()}`);
       const data = await res.json();
       renderTablePemakaianPerMasuk(data);
     }

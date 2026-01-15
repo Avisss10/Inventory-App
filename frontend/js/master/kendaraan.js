@@ -15,7 +15,7 @@
     // Ambil data kendaraan dari API
     async function loadKendaraan() {
       try {
-        const res = await fetch("http://localhost:3000/kendaraan");
+        const res = await fetch("http://localhost:3000/api/kendaraan");
         const data = await res.json();
         kendaraanData = data;
         renderTable();
@@ -164,14 +164,14 @@
         let res;
         if (id) {
           // Update
-          res = await fetch(`http://localhost:3000/kendaraan/${id}`, {
+          res = await fetch(`http://localhost:3000/api/kendaraan/${id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ dt_mobil, plat })
           });
         } else {
           // Tambah
-          res = await fetch("http://localhost:3000/kendaraan", {
+          res = await fetch("http://localhost:3000/api/kendaraan", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ dt_mobil, plat })
@@ -214,7 +214,7 @@
       if (!confirm("Yakin ingin menghapus kendaraan ini?")) return;
 
       try {
-        const res = await fetch(`http://localhost:3000/kendaraan/${id}`, {
+        const res = await fetch(`http://localhost:3000/api/kendaraan/${id}`, {
           method: "DELETE"
         });
         const result = await res.json();
