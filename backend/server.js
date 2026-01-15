@@ -2458,7 +2458,7 @@ app.get("/stok_ban", (req, res) => {
 // Fungsi: Rekap pemakaian ban berdasarkan tanggal ban masuk dengan filter tanggal dan vendor
 app.get("/pemakaian_ban_per_masuk", (req, res) => {
     try {
-        let { start, end, vendor, masuk_start, masuk_end, pemakaian_start, pemakaian_end } = req.query;
+        let { start, end, vendor, merkBan, masuk_start, masuk_end, pemakaian_start, pemakaian_end } = req.query;
 
         // Backwards compatibility: if legacy start/end used, treat as masuk range when masuk_ not provided
         if ((start || end) && (!masuk_start && !masuk_end)) {
@@ -2515,6 +2515,7 @@ app.get("/pemakaian_ban_per_masuk", (req, res) => {
         }
 
         // Apply filters for tanggal pemakaian (tanggal pasang ban baru)
+        // Hanya apply jika pemakaian_start atau pemakaian_end ada nilai
         if (pemakaian_start && pemakaian_end) {
             sql += " AND DATE(pb.tgl_pasang_ban_baru) BETWEEN ? AND ?";
             params.push(pemakaian_start, pemakaian_end);
@@ -2525,10 +2526,17 @@ app.get("/pemakaian_ban_per_masuk", (req, res) => {
             sql += " AND DATE(pb.tgl_pasang_ban_baru) = ?";
             params.push(pemakaian_end);
         }
+        // Jika pemakaian_start dan pemakaian_end kosong (semua data), tidak ada filter tanggal pemakaian
 
         if (vendor) {
             sql += " AND sb.id_vendor = ?";
             params.push(vendor);
+        }
+
+        // Filter Merk Ban
+        if (merkBan) {
+            sql += " AND sb.merk_ban LIKE ?";
+            params.push(`%${merkBan}%`);
         }
 
         sql += " ORDER BY sb.tgl_ban_masuk DESC, pb.id DESC";
@@ -2545,6 +2553,7 @@ app.get("/pemakaian_ban_per_masuk", (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+
 
 // GET /data_kendaraan
 // Page: lapban.html | JS: js/ban/lapban.js

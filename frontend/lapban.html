@@ -105,6 +105,11 @@
           <datalist id="vendorListPemakaianPerMasuk"></datalist>
         </div>
 
+        <div class="filter-group wide">
+          <label>Merk Ban:</label>
+          <input type="text" id="merkBanFilterPemakaianPerMasuk" placeholder="Ketik merk ban...">
+        </div>
+
         <div class="filter-group">
           <label>Periode Tanggal Masuk:</label>
           <select id="filterMasukTypePemakaian">
@@ -126,6 +131,7 @@
         <div class="filter-group">
           <label>Periode Tanggal Pemakaian:</label>
           <select id="filterPemakaianTypePemakaian">
+            <option value="semua">Semua Data</option>
             <option value="hari">Hari Ini</option>
             <option value="minggu">7 Hari Terakhir</option>
             <option value="bulan">Bulan Ini</option>
