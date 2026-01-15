@@ -95,6 +95,10 @@ const utils = {
     let start, end;
 
     switch (filterType) {
+      case 'semua': 
+        start = '';
+        end = '';
+        break;
       case 'hari':
         start = end = this.formatDateISO(today);
         break;
@@ -378,7 +382,6 @@ applyClientFilters(data) {
         url = `/rekap/pemakaian_oli?${params.toString()}`;
       }
       else if (tipe === 'pemakaian_per_bon') {
-        // Two separate date filters: Masuk (tanggal masuk oli) and Pemakaian (tanggal pemakaian)
         const masukType = $('filterMasukType').value;
         const pemakaianType = $('filterPemakaianType').value;
 
@@ -398,7 +401,8 @@ applyClientFilters(data) {
           params.append('masuk_start', masukRange.start);
           params.append('masuk_end', masukRange.end);
         }
-        if (pemakaianRange.start && pemakaianRange.end) {
+        
+        if (pemakaianType !== 'semua' && pemakaianRange.start && pemakaianRange.end) {
           params.append('pemakaian_start', pemakaianRange.start);
           params.append('pemakaian_end', pemakaianRange.end);
         }
@@ -739,8 +743,6 @@ async function loadInitialData(tipe) {
       // Default to today's Masuk and Pemakaian ranges (hari)
       params.append('masuk_start', todayISO);
       params.append('masuk_end', todayISO);
-      params.append('pemakaian_start', todayISO);
-      params.append('pemakaian_end', todayISO);
 
       url = `/rekap/pemakaian_per_bon?${params.toString()}`;
       state.currentFilter = {
@@ -751,9 +753,9 @@ async function loadInitialData(tipe) {
         masukStart: todayISO,
         masukEnd: todayISO,
         masukFilterType: 'hari',
-        pemakaianStart: todayISO,
-        pemakaianEnd: todayISO,
-        pemakaianFilterType: 'hari',
+        pemakaianStart: '',
+        pemakaianEnd: '',
+        pemakaianFilterType: 'semua',
         tipe: 'pemakaian_per_bon'
       };
     }
@@ -819,7 +821,7 @@ const exporter = {
       }
       if (state.currentFilter.pemakaianFilterType) {
         filters.push(['Periode Tanggal Pemakaian', CONFIG.filterLabels[state.currentFilter.pemakaianFilterType]]);
-        if (state.currentFilter.pemakaianStart && state.currentFilter.pemakaianEnd) {
+        if (state.currentFilter.pemakaianFilterType !== 'semua' && state.currentFilter.pemakaianStart && state.currentFilter.pemakaianEnd) {
           filters.push(['Tanggal Pemakaian', state.currentFilter.pemakaianStart === state.currentFilter.pemakaianEnd ? utils.formatDate(state.currentFilter.pemakaianStart) : `${utils.formatDate(state.currentFilter.pemakaianStart)} s/d ${utils.formatDate(state.currentFilter.pemakaianEnd)}`]);
         }
       }
@@ -879,7 +881,7 @@ const exporter = {
       if (state.currentFilter.masukStart && state.currentFilter.masukEnd) {
         parts.push(state.currentFilter.masukStart === state.currentFilter.masukEnd ? `Masuk_${state.currentFilter.masukStart}` : `Masuk_${state.currentFilter.masukStart}_sd_${state.currentFilter.masukEnd}`);
       }
-      if (state.currentFilter.pemakaianStart && state.currentFilter.pemakaianEnd) {
+      if (state.currentFilter.pemakaianFilterType !== 'semua' && state.currentFilter.pemakaianStart && state.currentFilter.pemakaianEnd) {
         parts.push(state.currentFilter.pemakaianStart === state.currentFilter.pemakaianEnd ? `Pemakaian_${state.currentFilter.pemakaianStart}` : `Pemakaian_${state.currentFilter.pemakaianStart}_sd_${state.currentFilter.pemakaianEnd}`);
       }
     }
@@ -1435,10 +1437,11 @@ $('filterMasukType').addEventListener('change', function() {
 // Pemakaian date filter handler (Pemakaian Per Bon)
 $('filterPemakaianType').addEventListener('change', function() {
   const isManual = this.value === 'manual';
-  $('filterPemakaianStartGroup').classList.toggle('filter-hidden', !isManual);
-  $('filterPemakaianEndGroup').classList.toggle('filter-hidden', !isManual);
-  $('filterPemakaianStart').required = isManual;
-  $('filterPemakaianEnd').required = isManual;
+  const isSemua = this.value === 'semua';
+  $('filterPemakaianStartGroup').classList.toggle('filter-hidden', !isManual || isSemua); 
+  $('filterPemakaianEndGroup').classList.toggle('filter-hidden', !isManual || isSemua);
+  $('filterPemakaianStart').required = isManual && !isSemua;
+  $('filterPemakaianEnd').required = isManual && !isSemua;
 });
 
 // Real-time search untuk oli_tersedia
@@ -1493,7 +1496,7 @@ $('resetFilter').addEventListener('click', () => {
   $('filterMasukStartGroup').classList.add('filter-hidden');
   $('filterMasukEndGroup').classList.add('filter-hidden');
 
-  $('filterPemakaianType').value = 'hari';
+  $('filterPemakaianType').value = 'semua';
   $('filterPemakaianStart').value = '';
   $('filterPemakaianEnd').value = '';
   $('filterPemakaianStartGroup').classList.add('filter-hidden');

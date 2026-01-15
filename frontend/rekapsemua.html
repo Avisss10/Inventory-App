@@ -1,3 +1,4 @@
+<artifact identifier="rekapsemua-html-updated" type="text/html" title="Rekap Semua HTML - Updated">
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -11,9 +12,7 @@
 </head>
 <body>
   <a href="index.html" class="btn-back">← Kembali ke Menu</a>
-  <h2>Rekap Data</h2>
-
-  <div class="filter-container">
+  <h2>Rekap Data</h2>  <div class="filter-container">
     <form id="filterForm">
       <div class="filter-row">
         <div class="filter-group wide">
@@ -22,136 +21,140 @@
             <option value="stok">Stok Gudang</option>
             <option value="kendaraan">Pemakaian Kendaraan</option>
             <option value="vendor">Vendor</option>
-            <option value="pemakaian_vendor">Pemakaian per Vendor</option>
+            <option value="pemakaian_vendor">Pemakaian Per Bon</option>
           </select>
         </div>
-
         <div class="filter-group filter-kendaraan filter-vendor" id="filterWaktuGroup">
-          <label>Filter Waktu:</label>
-          <select id="filterType">
-            <option value="hari">Hari Ini</option>
-            <option value="minggu">7 Hari Terakhir</option>
-            <option value="bulan">Bulan Ini</option>
-            <option value="manual">Tanggal Manual</option>
-          </select>
-        </div>
+      <label>Filter Waktu:</label>
+      <select id="filterType">
+        <option value="hari">Hari Ini</option>
+        <option value="minggu">7 Hari Terakhir</option>
+        <option value="bulan">Bulan Ini</option>
+        <option value="manual">Tanggal Manual</option>
+      </select>
+    </div>
 
-        <!-- Additional: Periode Tanggal Masuk (only for Pemakaian per Vendor) -->
-        <div class="filter-group filter-pemakaian_vendor filter-hidden" id="filterMasukWaktuGroup">
-          <label>Periode Tanggal Masuk:</label>
-          <select id="filterMasukType">
-            <option value="hari">Hari Ini</option>
-            <option value="minggu">7 Hari Terakhir</option>
-            <option value="bulan">Bulan Ini</option>
-            <option value="manual">Tanggal Manual</option>
-          </select>
-        </div>
+    <!-- Additional: Periode Tanggal Masuk (only for Pemakaian per Bon) -->
+    <div class="filter-group filter-pemakaian_vendor filter-hidden" id="filterMasukWaktuGroup">
+      <label>Periode Tanggal Masuk:</label>
+      <select id="filterMasukType">
+        <option value="hari">Hari Ini</option>
+        <option value="minggu">7 Hari Terakhir</option>
+        <option value="bulan">Bulan Ini</option>
+        <option value="manual">Tanggal Manual</option>
+      </select>
+    </div>
 
-        <!-- Manual date inputs for Periode Tanggal Masuk (placed immediately after select) -->
-        <div class="filter-group narrow filter-pemakaian_vendor filter-hidden" id="filterMasukStartGroup">
-          <label>Masuk - Dari:</label>
-          <input type="date" id="filterMasukStart">
-        </div>
+    <!-- Manual date inputs for Periode Tanggal Masuk -->
+    <div class="filter-group narrow filter-pemakaian_vendor filter-hidden" id="filterMasukStartGroup">
+      <label>Masuk - Dari:</label>
+      <input type="date" id="filterMasukStart">
+    </div>
 
-        <div class="filter-group narrow filter-pemakaian_vendor filter-hidden" id="filterMasukEndGroup">
-          <label>Masuk - Sampai:</label>
-          <input type="date" id="filterMasukEnd">
-        </div>
+    <div class="filter-group narrow filter-pemakaian_vendor filter-hidden" id="filterMasukEndGroup">
+      <label>Masuk - Sampai:</label>
+      <input type="date" id="filterMasukEnd">
+    </div>
 
-        <!-- Additional: Periode Tanggal Pemakaian (only for Pemakaian per Vendor) -->
-        <div class="filter-group filter-pemakaian_vendor filter-hidden" id="filterPemakaianWaktuGroup">
-          <label>Periode Tanggal Pemakaian:</label>
-          <select id="filterPemakaianType">
-            <option value="hari">Hari Ini</option>
-            <option value="minggu">7 Hari Terakhir</option>
-            <option value="bulan">Bulan Ini</option>
-            <option value="manual">Tanggal Manual</option>
-          </select>
-        </div>
+    <!-- Additional: Periode Tanggal Pemakaian (only for Pemakaian per Bon) -->
+    <div class="filter-group filter-pemakaian_vendor filter-hidden" id="filterPemakaianWaktuGroup">
+      <label>Periode Tanggal Pemakaian:</label>
+      <select id="filterPemakaianType">
+        <option value="semua">Semua Data</option>
+        <option value="hari">Hari Ini</option>
+        <option value="minggu">7 Hari Terakhir</option>
+        <option value="bulan">Bulan Ini</option>
+        <option value="manual">Tanggal Manual</option>
+      </select>
+    </div>
 
-        <!-- Manual date inputs for Periode Tanggal Pemakaian (placed immediately after select) -->
-        <div class="filter-group narrow filter-pemakaian_vendor filter-hidden" id="filterPemakaianStartGroup">
-          <label>Pemakaian - Dari:</label>
-          <input type="date" id="filterPemakaianStart">
-        </div>
+    <!-- Manual date inputs for Periode Tanggal Pemakaian -->
+    <div class="filter-group narrow filter-pemakaian_vendor filter-hidden" id="filterPemakaianStartGroup">
+      <label>Pemakaian - Dari:</label>
+      <input type="date" id="filterPemakaianStart">
+    </div>
 
-        <div class="filter-group narrow filter-pemakaian_vendor filter-hidden" id="filterPemakaianEndGroup">
-          <label>Pemakaian - Sampai:</label>
-          <input type="date" id="filterPemakaianEnd">
-        </div>
+    <div class="filter-group narrow filter-pemakaian_vendor filter-hidden" id="filterPemakaianEndGroup">
+      <label>Pemakaian - Sampai:</label>
+      <input type="date" id="filterPemakaianEnd">
+    </div>
 
-        <!-- Generic single periode inputs (for Kendaraan & Vendor types) -->
-        <div class="filter-group narrow filter-kendaraan filter-vendor filter-hidden" id="filterStartGroup">
-          <label>Dari:</label>
-          <input type="date" id="filterStart">
-        </div>
+    <!-- Generic single periode inputs (for Kendaraan & Vendor types) -->
+    <div class="filter-group narrow filter-kendaraan filter-vendor filter-hidden" id="filterStartGroup">
+      <label>Dari:</label>
+      <input type="date" id="filterStart">
+    </div>
 
-        <div class="filter-group narrow filter-kendaraan filter-vendor filter-hidden" id="filterEndGroup">
-          <label>Sampai:</label>
-          <input type="date" id="filterEnd">
-        </div>
-      </div>
-      
-      <div class="filter-row">
-        <div class="filter-group wide filter-stok filter-pemakaian_vendor">
-          <label>Nama Barang:</label>
-          <input type="text" id="barangFilter" placeholder="Ketik untuk mencari barang..." list="barangList">
-          <datalist id="barangList"></datalist>
-        </div>
-
-        <div class="filter-group wide filter-stok filter-vendor filter-kendaraan filter-pemakaian_vendor">
-          <label>Vendor:</label>
-          <input type="text" id="vendorFilter" placeholder="Ketik untuk mencari Vendor..." list="vendorList">
-          <datalist id="vendorList"></datalist>
-        </div>
-
-        <div class="filter-group filter-stok">
-          <label>Filter Stok:</label>
-          <select id="stokFilter">
-            <option value="semua">Semua Stok</option>
-            <option value="habis">Stok = 0 Item</option>
-          </select>
-        </div>
-
-        <div class="filter-group filter-stok">
-          <label>Satuan:</label>
-          <select id="satuanFilter">
-            <option value="semua">Semua Satuan</option>
-            <option value="pcs">Pcs</option>
-            <option value="liter">Liter</option>
-            <option value="set">Set</option>
-            <option value="lembar">Lembar</option>
-            <option value="galon">Galon</option>
-            <option value="meter">Meter</option>
-          </select>
-        </div>
-
-        <div class="filter-group wide filter-kendaraan filter-pemakaian_vendor filter-hidden">
-          <label>Kendaraan:</label>
-          <input type="text" id="kendaraanFilter" placeholder="Ketik nama/plat kendaraan..." list="kendaraanFilterList">
-          <datalist id="kendaraanFilterList"></datalist>
-        </div>
-
-        <div class="filter-group filter-kendaraan filter-hidden">
-          <label>Jenis Barang:</label>
-          <select id="jenisBarangFilter">
-            <option value="semua">Semua</option>
-            <option value="sparepart">Sparepart</option>
-            <option value="ban">Ban</option>
-            <option value="literan">Literan</option>
-          </select>
-        </div>
-
-        <div class="button-group">
-          <button type="submit">Terapkan Filter</button>
-          <button type="button" id="resetFilter" class="btn-reset">Reset</button>
-        </div>
-      </div>
-    </form>
+    <div class="filter-group narrow filter-kendaraan filter-vendor filter-hidden" id="filterEndGroup">
+      <label>Sampai:</label>
+      <input type="date" id="filterEnd">
+    </div>
   </div>
+  
+  <div class="filter-row">
+    <div class="filter-group wide filter-stok filter-pemakaian_vendor">
+      <label>Nama Barang:</label>
+      <input type="text" id="barangFilter" placeholder="Ketik untuk mencari barang..." list="barangList">
+      <datalist id="barangList"></datalist>
+    </div>
 
+    <div class="filter-group wide filter-stok filter-vendor filter-kendaraan filter-pemakaian_vendor">
+      <label>Vendor:</label>
+      <input type="text" id="vendorFilter" placeholder="Ketik untuk mencari Vendor..." list="vendorList">
+      <datalist id="vendorList"></datalist>
+    </div>
+
+    <div class="filter-group filter-stok">
+      <label>Filter Stok:</label>
+      <select id="stokFilter">
+        <option value="semua">Semua Stok</option>
+        <option value="habis">Stok = 0 Item</option>
+      </select>
+    </div>
+
+    <div class="filter-group filter-stok">
+      <label>Satuan:</label>
+      <select id="satuanFilter">
+        <option value="semua">Semua Satuan</option>
+        <option value="pcs">Pcs</option>
+        <option value="liter">Liter</option>
+        <option value="set">Set</option>
+        <option value="lembar">Lembar</option>
+        <option value="galon">Galon</option>
+        <option value="meter">Meter</option>
+      </select>
+    </div>
+
+    <div class="filter-group wide filter-kendaraan filter-pemakaian_vendor filter-hidden">
+      <label>Kendaraan:</label>
+      <input type="text" id="kendaraanFilter" placeholder="Ketik nama/plat kendaraan..." list="kendaraanFilterList">
+      <datalist id="kendaraanFilterList"></datalist>
+    </div>
+
+    <div class="filter-group filter-kendaraan filter-hidden">
+      <label>Jenis Barang:</label>
+      <select id="jenisBarangFilter">
+        <option value="semua">Semua</option>
+        <option value="sparepart">Sparepart</option>
+        <option value="ban">Ban</option>
+        <option value="literan">Literan</option>
+      </select>
+    </div>
+
+    <!-- NEW: No Seri Filter (only for Pemakaian per Bon) -->
+    <div class="filter-group wide filter-pemakaian_vendor filter-hidden">
+      <label>No Seri:</label>
+      <input type="text" id="noSeriFilter" placeholder="Ketik no seri...">
+    </div>
+
+    <div class="button-group">
+      <button type="submit">Terapkan Filter</button>
+      <button type="button" id="resetFilter" class="btn-reset">Reset</button>
+    </div>
+  </div>
+</form>
+</div>
   <div id="lowStockAlert" class="alert-low-stock filter-hidden"></div>
-
   <div class="export-container">
     <span class="export-label">Export Data:</span>
     <div class="button-group">
@@ -159,7 +162,6 @@
       <button id="exportPDF" class="btn-export-pdf">📄 Export PDF</button>
     </div>
   </div>
-
   <div class="table-container">
     <table id="rekapTable">
       <thead id="tableHead">
@@ -182,14 +184,13 @@
       </tbody>
     </table>
   </div>
-
   <div class="summary-container">
     <div id="summary">
       <strong>Total Barang (Keseluruhan):</strong> 0<br>
       <strong>Grand Total:</strong> Rp 0
     </div>
   </div>
-
   <script src="./js/sparepart/rekapsemua.js"></script>
 </body>
 </html>
+</artifact>

@@ -968,11 +968,10 @@ app.delete("/pemakaian/:id", (req, res) => {
 // Fungsi: Mengambil data pemakaian sparepart dengan filter vendor untuk laporan detail
 app.get("/pemakaian_vendor", (req, res) => {
     try {
-        // Support two date ranges: masuk_* (barang masuk) and pemakaian_* (tanggal pemakaian)
-        let { start, end, vendor, barang, kendaraan, masuk_start, masuk_end, pemakaian_start, pemakaian_end } = req.query;
+        // ← TAMBAH no_seri di destructuring
+        let { start, end, vendor, barang, kendaraan, no_seri, masuk_start, masuk_end, pemakaian_start, pemakaian_end } = req.query;
 
         const dateRE = /^\d{4}-\d{2}-\d{2}$/;
-        // validate each date param if present
         const checkDate = (label, val) => {
             if (val && !dateRE.test(val)) {
                 return `${label} harus format YYYY-MM-DD`;
@@ -983,19 +982,16 @@ app.get("/pemakaian_vendor", (req, res) => {
         const errMsg = checkDate('masuk_start', masuk_start) || checkDate('masuk_end', masuk_end) || checkDate('pemakaian_start', pemakaian_start) || checkDate('pemakaian_end', pemakaian_end) || checkDate('start', start) || checkDate('end', end);
         if (errMsg) return res.status(400).json({ error: errMsg });
 
-        // Legacy compatibility: if masuk_* not provided, fall back to start/end
         let mStart = masuk_start || start;
         let mEnd = masuk_end || end;
         let pStart = pemakaian_start;
         let pEnd = pemakaian_end;
 
-        // normalize start/end order for masuk
         if (mStart && mEnd && mStart > mEnd) {
             const tmp = mStart;
             mStart = mEnd;
             mEnd = tmp;
         }
-        // normalize start/end order for pemakaian
         if (pStart && pEnd && pStart > pEnd) {
             const tmp = pStart;
             pStart = pEnd;
@@ -1025,7 +1021,6 @@ app.get("/pemakaian_vendor", (req, res) => {
 
         const params = [];
 
-        // Apply masuk (barang masuk) filters if present
         if (mStart && mEnd) {
             sql += " AND DATE(bm.tgl_sparepart_masuk) BETWEEN ? AND ?";
             params.push(mStart, mEnd);
@@ -1037,7 +1032,7 @@ app.get("/pemakaian_vendor", (req, res) => {
             params.push(mEnd);
         }
 
-        // Apply pemakaian (tanggal pemakaian) filters if present
+        // ← UBAH KONDISI: hanya apply filter jika pStart atau pEnd ada (tidak untuk 'semua')
         if (pStart && pEnd) {
             sql += " AND DATE(p.tanggal) BETWEEN ? AND ?";
             params.push(pStart, pEnd);
@@ -1048,6 +1043,7 @@ app.get("/pemakaian_vendor", (req, res) => {
             sql += " AND DATE(p.tanggal) = ?";
             params.push(pEnd);
         }
+        // Jika pStart dan pEnd kosong (semua data), tidak ada filter tanggal pemakaian
 
         if (vendor) {
             sql += " AND s.id_vendor = ?";
@@ -1057,6 +1053,12 @@ app.get("/pemakaian_vendor", (req, res) => {
         if (barang) {
             sql += " AND s.nama_sparepart LIKE ?";
             params.push(`%${barang}%`);
+        }
+
+        // ← TAMBAH FILTER NO SERI
+        if (no_seri) {
+            sql += " AND s.no_seri LIKE ?";
+            params.push(`%${no_seri}%`);
         }
 
         if (kendaraan) {

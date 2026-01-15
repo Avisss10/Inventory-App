@@ -57,8 +57,7 @@ function renderTable() {
     const filter = filterInput.value.toLowerCase();
     let filteredData = sparepartData.filter(sparepart =>
         (sparepart.nama_sparepart.toLowerCase().includes(filter) ||
-        sparepart.no_seri.toLowerCase().includes(filter)) &&
-        sparepart.jumlah > 0
+        sparepart.no_seri.toLowerCase().includes(filter))
     );
 
     const start = (currentPage - 1) * rowsPerPage;
@@ -98,8 +97,7 @@ function renderPagination() {
     const filter = filterInput.value.toLowerCase();
     let filteredData = sparepartData.filter(sparepart =>
         (sparepart.nama_sparepart.toLowerCase().includes(filter) ||
-        sparepart.no_seri.toLowerCase().includes(filter)) &&
-        sparepart.jumlah > 0
+        sparepart.no_seri.toLowerCase().includes(filter))
     );
     const totalPages = Math.ceil(filteredData.length / rowsPerPage);
     const paginationDiv = document.getElementById('pagination');

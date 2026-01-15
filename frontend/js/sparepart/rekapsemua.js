@@ -12,9 +12,10 @@
         stok: 'REKAP STOK GUDANG',
         kendaraan: 'REKAP PEMAKAIAN KENDARAAN',
         vendor: 'REKAP TRANSAKSI VENDOR',
-        pemakaian_vendor: 'REKAP PEMAKAIAN PER VENDOR'
+        pemakaian_vendor: 'REKAP PEMAKAIAN PER BON'
       },
       filterLabels: {
+        semua: 'Semua Data',
         hari: 'Hari Ini',
         minggu: '7 Hari Terakhir',
         bulan: 'Bulan Ini',
@@ -48,6 +49,10 @@
         let start, end;
 
         switch (filterType) {
+          case 'semua':
+            start = '';
+            end = '';
+            break;
           case 'hari':
             start = end = today.toISOString().split('T')[0];
             break;
@@ -285,11 +290,13 @@
             const vendorId = vendorNama ? state.vendorNameToId[vendorNama] : '';
             const barang = $('barangFilter').value;
             const kendaraanId = state.kendaraanLabelToId[$('kendaraanFilter').value] || '';
+            const noSeri = $('noSeriFilter').value.trim();
 
             const masukParams = (masukType && masukRange.start && masukRange.end) ? `&masuk_start=${masukRange.start}&masuk_end=${masukRange.end}` : '';
-            const pemakaianParams = (pemakaianType && pemakaianRange.start && pemakaianRange.end) ? `&pemakaian_start=${pemakaianRange.start}&pemakaian_end=${pemakaianRange.end}` : '';
+            const pemakaianParams = (pemakaianType && pemakaianType !== 'semua' && pemakaianRange.start && pemakaianRange.end) ? `&pemakaian_start=${pemakaianRange.start}&pemakaian_end=${pemakaianRange.end}` : '';
+            const noSeriParam = noSeri ? `&no_seri=${encodeURIComponent(noSeri)}` : '';
 
-            url = `/pemakaian_vendor?vendor=${vendorId}&barang=${barang}&kendaraan=${kendaraanId}${masukParams}${pemakaianParams}`;
+             url = `/pemakaian_vendor?vendor=${vendorId}&barang=${barang}&kendaraan=${kendaraanId}${masukParams}${pemakaianParams}${noSeriParam}`;
 
             state.currentFilter = {
               vendor: vendorId,
@@ -297,6 +304,7 @@
               barang,
               kendaraan: kendaraanId,
               kendaraanLabel: $('kendaraanFilter').value,
+              noSeri,
               masukStart: masukRange.start || '',
               masukEnd: masukRange.end || '',
               masukFilterType: masukType,
@@ -501,6 +509,7 @@
           if (state.currentFilter.vendorNama) filters.push(['Vendor', state.currentFilter.vendorNama]);
           if (state.currentFilter.barang) filters.push(['Nama Barang', state.currentFilter.barang]);
           if (state.currentFilter.kendaraanLabel) filters.push(['Kendaraan', state.currentFilter.kendaraanLabel]);
+          if (state.currentFilter.noSeri) filters.push(['No Seri', state.currentFilter.noSeri]);
 
           // Describe Masuk filter
           if (state.currentFilter.masukFilterType) {
@@ -513,7 +522,7 @@
           // Describe Pemakaian filter
           if (state.currentFilter.pemakaianFilterType) {
             filters.push(['Periode Tanggal Pemakaian', CONFIG.filterLabels[state.currentFilter.pemakaianFilterType]]);
-            if (state.currentFilter.pemakaianStart && state.currentFilter.pemakaianEnd) {
+            if (state.currentFilter.pemakaianFilterType !== 'semua' && state.currentFilter.pemakaianStart && state.currentFilter.pemakaianEnd) {
               filters.push(['Tanggal Pemakaian', state.currentFilter.pemakaianStart === state.currentFilter.pemakaianEnd ? state.currentFilter.pemakaianStart : `${state.currentFilter.pemakaianStart} s/d ${state.currentFilter.pemakaianEnd}`]);
             }
           }
@@ -553,9 +562,10 @@
               : `${state.currentFilter.startDate}_sd_${state.currentFilter.endDate}`);
           }
         } else if (tipe === 'pemakaian_vendor') {
-          parts.push('PemakaianVendor');
+          parts.push('PemakaianPerBon');  
           if (state.currentFilter.vendorNama) parts.push(state.currentFilter.vendorNama.replace(/\s+/g, '_'));
           if (state.currentFilter.barang) parts.push(state.currentFilter.barang.replace(/\s+/g, '_'));
+          if (state.currentFilter.noSeri) parts.push(state.currentFilter.noSeri.replace(/\s+/g, '_'));
           if (state.currentFilter.kendaraanLabel) {
             parts.push(state.currentFilter.kendaraanLabel.replace(/\s+/g, '_').replace(/-/g, '_'));
           }
@@ -565,7 +575,7 @@
               ? `Masuk_${state.currentFilter.masukStart}`
               : `Masuk_${state.currentFilter.masukStart}_sd_${state.currentFilter.masukEnd}`);
           }
-          if (state.currentFilter.pemakaianStart && state.currentFilter.pemakaianEnd) {
+          if (state.currentFilter.pemakaianFilterType !== 'semua' && state.currentFilter.pemakaianStart && state.currentFilter.pemakaianEnd) {
             parts.push(state.currentFilter.pemakaianStart === state.currentFilter.pemakaianEnd
               ? `Pemakaian_${state.currentFilter.pemakaianStart}`
               : `Pemakaian_${state.currentFilter.pemakaianStart}_sd_${state.currentFilter.pemakaianEnd}`);
@@ -917,10 +927,11 @@
     // Pemakaian date filter handler (pemakaian per vendor)
     $('filterPemakaianType').addEventListener('change', function() {
       const isManual = this.value === 'manual';
-      $('filterPemakaianStartGroup').classList.toggle('filter-hidden', !isManual);
-      $('filterPemakaianEndGroup').classList.toggle('filter-hidden', !isManual);
-      $('filterPemakaianStart').required = isManual;
-      $('filterPemakaianEnd').required = isManual;
+      const isSemua = this.value === 'semua';
+      $('filterPemakaianStartGroup').classList.toggle('filter-hidden', !isManual || isSemua);
+      $('filterPemakaianEndGroup').classList.toggle('filter-hidden', !isManual || isSemua);
+      $('filterPemakaianStart').required = isManual && !isSemua;  
+      $('filterPemakaianEnd').required = isManual && !isSemua;
     });
 
     $('barangFilter').addEventListener('input', function() {
@@ -987,11 +998,13 @@
           $('filterMasukStartGroup').classList.add('filter-hidden');
           $('filterMasukEndGroup').classList.add('filter-hidden');
 
-          $('filterPemakaianType').value = 'hari';
+          $('filterPemakaianType').value = 'semua';
           $('filterPemakaianStart').value = '';
           $('filterPemakaianEnd').value = '';
           $('filterPemakaianStartGroup').classList.add('filter-hidden');
           $('filterPemakaianEndGroup').classList.add('filter-hidden');
+
+          $('noSeriFilter').value = '';
         }
 
         ui.showEmpty(tipe, 'Silakan pilih filter dan klik Terapkan Filter');
