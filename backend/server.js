@@ -16,7 +16,11 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // static frontend
-app.use(express.static(path.join(__dirname, '../frontend')));
+const basePath = process.pkg
+  ? path.dirname(process.execPath) // saat exe
+  : path.join(__dirname, '..');    // saat dev
+
+app.use(express.static(path.join(basePath, 'frontend')));
 
 // 🔥 mount page routes
 app.use('/', require('./routes/page.routes'));
