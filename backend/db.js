@@ -6,7 +6,7 @@ const db = mysql.createConnection({
     host: "localhost",
     user: "root",
     password: "",
-    database: "db_stok",
+    database: "db_stock",
     dateStrings: true
 });
 

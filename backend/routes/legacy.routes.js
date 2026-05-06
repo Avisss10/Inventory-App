@@ -288,10 +288,11 @@ router.put("/api/barang_masuk/:id", (req, res) => {
     const { tgl_sparepart_masuk, nama_sparepart, no_seri, jumlah, satuan, harga, id_vendor } = req.body;
     const processedJumlah = satuan.toLowerCase().includes('liter') ? String(jumlah).replace(',', '.') : jumlah;
     const jumlahNum = parseFloat(processedJumlah) || 0;
+    const hargaNum = parseInt(harga) || 0;
 
     db.query(
         "UPDATE barang_masuk SET tgl_sparepart_masuk=?, nama_sparepart=?, no_seri=?, jumlah=?, satuan=?, harga=?, id_vendor=? WHERE id=?",
-        [tgl_sparepart_masuk, nama_sparepart, no_seri, jumlahNum, satuan, harga, id_vendor, id],
+        [tgl_sparepart_masuk, nama_sparepart, no_seri, jumlahNum, satuan, hargaNum, id_vendor, id],
         (err, result) => {
             if (err) {
                 console.error("Error update barang_masuk:", err);
@@ -331,6 +332,7 @@ router.post("/api/sparepart", (req, res) => {
     const { tgl_sparepart_masuk, nama_sparepart, no_seri, jumlah, satuan, harga, id_vendor } = req.body;
     const processedJumlah = satuan.toLowerCase().includes('liter') ? String(jumlah).replace(',', '.') : jumlah;
     const jumlahNum = parseFloat(processedJumlah) || 0;
+    const hargaNum = parseInt(harga) || 0;
 
     db.beginTransaction((err) => {
         if (err) {
@@ -338,10 +340,10 @@ router.post("/api/sparepart", (req, res) => {
             return res.status(500).json({ error: err.sqlMessage || err.message });
         }
 
-        // 1. Insert ke stok_sparepart
+        // 1. Insert ke stok_sparepart tanpa PPN
         db.query(
             "INSERT INTO stok_sparepart (tgl_sparepart_masuk, nama_sparepart, no_seri, jumlah, satuan, harga, id_vendor) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            [tgl_sparepart_masuk, nama_sparepart, no_seri, jumlahNum, satuan, harga, id_vendor],
+            [tgl_sparepart_masuk, nama_sparepart, no_seri, jumlahNum, satuan, hargaNum, id_vendor],
             (err, result) => {
                 if (err) {
                     return db.rollback(() => {
@@ -352,10 +354,10 @@ router.post("/api/sparepart", (req, res) => {
 
                 const stokId = result.insertId;
 
-                // 2. Insert ke barang_masuk
+                // 2. Insert ke barang_masuk tanpa PPN
                 db.query(
                     "INSERT INTO barang_masuk (tgl_sparepart_masuk, nama_sparepart, no_seri, jumlah, satuan, harga, id_vendor) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    [tgl_sparepart_masuk, nama_sparepart, no_seri, jumlahNum, satuan, harga, id_vendor],
+                    [tgl_sparepart_masuk, nama_sparepart, no_seri, jumlahNum, satuan, hargaNum, id_vendor],
                     (err2, result2) => {
                         if (err2) {
                             return db.rollback(() => {
@@ -393,11 +395,11 @@ router.put("/api/sparepart/:id", (req, res) => {
     const { tgl_sparepart_masuk, nama_sparepart, no_seri, jumlah, satuan, harga, id_vendor } = req.body;
     const processedJumlah = satuan.toLowerCase().includes('liter') ? String(jumlah).replace(',', '.') : jumlah;
     const jumlahNum = parseFloat(processedJumlah) || 0;
+    const hargaNum = parseInt(harga) || 0;
 
-    // HANYA UPDATE stok_sparepart
     db.query(
         "UPDATE stok_sparepart SET tgl_sparepart_masuk=?, nama_sparepart=?, no_seri=?, jumlah=?, satuan=?, harga=?, id_vendor=? WHERE id=?",
-        [tgl_sparepart_masuk, nama_sparepart, no_seri, jumlahNum, satuan, harga, id_vendor, id],
+        [tgl_sparepart_masuk, nama_sparepart, no_seri, jumlahNum, satuan, hargaNum, id_vendor, id],
         (err, result) => {
             if (err) {
                 console.error("Error update stok_sparepart:", err);

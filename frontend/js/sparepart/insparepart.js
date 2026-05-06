@@ -391,6 +391,12 @@ sp_harga.addEventListener('input', function(e){
     e.target.value = rawValue ? Number(rawValue).toLocaleString('id-ID') : '';
 });
 
+bm_harga.addEventListener('input', function(e) {
+    if (isSettingValue) return;
+    const rawValue = e.target.value.replace(/\D/g, '');
+    e.target.value = rawValue ? Number(rawValue).toLocaleString('id-ID') : '';
+});
+
 // ===== DELETE =====
 async function deleteSparepart(id) {
     try {

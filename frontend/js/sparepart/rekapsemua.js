@@ -1,9 +1,9 @@
     const API_BASE_URL = 'http://localhost:3000/api';
     
     const CONFIG = {
-      columnCounts: { stok: 9, kendaraan: 11, vendor: 9, pemakaian_vendor: 11 },
+      columnCounts: { stok: 8, kendaraan: 11, vendor: 9, pemakaian_vendor: 11 },
       headers: {
-        stok: ['No', 'No Seri', 'Nama Sparepart', 'Jumlah', 'Satuan', 'Harga Satuan', 'Total', 'Vendor', 'Tanggal'],
+        stok: ['No', 'No Seri', 'Nama Sparepart', 'Jumlah', 'Harga Satuan', 'Total', 'Vendor', 'Tanggal'],
         kendaraan: ['No', 'Tanggal', 'Kendaraan', 'Nama Barang', 'Jumlah', 'Satuan', 'Harga Satuan', 'Total', 'Vendor', 'Penanggung Jawab', 'No Seri / Keterangan'],
         vendor: ['No', 'Tanggal', 'Vendor', 'No Seri', 'Nama Barang', 'Jumlah', 'Satuan', 'Harga Satuan', 'Total'],
         pemakaian_vendor: ['No', 'Tanggal Masuk', 'No Seri', 'Nama Barang', 'Jumlah', 'Satuan', 'Harga Satuan', 'Total', 'Vendor', 'Kendaraan', 'Tanggal Pemakaian']
@@ -366,7 +366,6 @@
             <td>${row.no_seri || '-'}</td>
             <td style="text-align: left;">${row.nama_sparepart || row.nama_barang || ''}</td>
             <td>${qty}</td>
-            <td>${row.satuan || ''}</td>
             <td style="text-align: right;">${utils.formatCurrency(price)}</td>
             <td style="text-align: right;">${utils.formatCurrency(total)}</td>
             <td style="text-align: left;">${row.nama_vendor || '-'}</td>
@@ -421,18 +420,18 @@
 
         state.currentData.forEach(row => {
           const qty = utils.parseQty(row.jumlah);
-          const price = parseInt(row.harga) || 0;
-          const total = qty * price;
           const satuan = row.satuan || 'unknown';
+          const price = parseInt(row.harga) || 0;
+          const value = qty * price;
 
           if (!satuanData[satuan]) {
             satuanData[satuan] = { qty: 0, value: 0 };
           }
 
           satuanData[satuan].qty += qty;
-          satuanData[satuan].value += total;
+          satuanData[satuan].value += value;
           totalQty += qty;
-          grandTotal += total;
+          grandTotal += value;
         });
 
         return { satuanData, totalQty, grandTotal };
@@ -442,7 +441,6 @@
         const summary = this.calculateSummary();
         let html = '';
 
-        // Show all satuan totals
         Object.keys(summary.satuanData).sort().forEach(satuan => {
           const data = summary.satuanData[satuan];
           if (data.qty > 0) {
@@ -453,14 +451,12 @@
           }
         });
 
-        // Separator between satuan totals and overall totals
         if (html) {
           html += `<div style="border-top: 2px solid #dee2e6; margin: 15px 0; position: relative;">
             <div style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: #fff; padding: 0 10px; color: #6c757d; font-size: 12px; font-weight: 500;">TOTAL KESELURUHAN</div>
           </div>`;
         }
 
-        // Overall totals
         html += `<div style="display: flex; justify-content: space-between; margin-bottom: 8px; padding: 8px 0; background: #f8f9fa; border-radius: 4px;">
           <span style="font-weight: 600; font-size: 15px;">Total Barang (Keseluruhan): ${summary.totalQty}</span>
           <span style="font-weight: 600; font-size: 15px; color: #28a745;">Grand Total: ${utils.formatCurrency(summary.grandTotal)}</span>
@@ -618,7 +614,6 @@
               row.no_seri || '-',
               row.nama_sparepart || row.nama_barang,
               qty,
-              row.satuan,
               price,
               total,
               row.nama_vendor || '-',
@@ -676,20 +671,45 @@
         Object.keys(summary.satuanData).sort().forEach(satuan => {
           const data = summary.satuanData[satuan];
           if (data.qty > 0) {
-            wsData.push([`Total Barang (${utils.capitalize(satuan)}): ${data.qty}`, `Total Harga (${utils.capitalize(satuan)}): Rp ${data.value.toLocaleString('id-ID')}`]);
+            wsData.push([`Total Barang (${utils.capitalize(satuan)}): ${data.qty}`, `Total: Rp ${data.value.toLocaleString('id-ID')}`]);
           }
         });
 
         // Separator
-        wsData.push(['', '']);
-        wsData.push(['=====================================', '=====================================']);
+        wsData.push(['', '', '']);
+        wsData.push(['=====================================', '=====================================', '=====================================']);
 
         // Overall totals
         wsData.push([`Total Barang (Keseluruhan): ${summary.totalQty}`, `Grand Total: Rp ${summary.grandTotal.toLocaleString('id-ID')}`]);
 
         const ws = XLSX.utils.aoa_to_sheet(wsData);
         
-        ws['!cols'] = [
+        const colWidths = tipe === 'stok' ? [
+          { wch: 5 },
+          { wch: 15 },
+          { wch: 30 },
+          { wch: 8 },
+          { wch: 12 },
+          { wch: 12 },
+          { wch: 8 },
+          { wch: 12 },
+          { wch: 15 },
+          { wch: 15 },
+          { wch: 12 }
+        ] : tipe === 'vendor' ? [
+          { wch: 5 },
+          { wch: 12 },
+          { wch: 15 },
+          { wch: 15 },
+          { wch: 30 },
+          { wch: 8 },
+          { wch: 8 },
+          { wch: 12 },
+          { wch: 12 },
+          { wch: 8 },
+          { wch: 12 },
+          { wch: 15 }
+        ] : [
           { wch: 5 },
           { wch: 15 },
           { wch: 15 },
@@ -702,6 +722,8 @@
           { wch: 20 },
           { wch: 15 }
         ];
+        
+        ws['!cols'] = colWidths;
 
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Rekap');
@@ -747,7 +769,6 @@
               row.no_seri || '-',
               row.nama_sparepart || row.nama_barang,
               qty,
-              row.satuan,
               utils.formatCurrency(price),
               utils.formatCurrency(total),
               row.nama_vendor || '-',
