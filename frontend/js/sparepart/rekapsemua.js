@@ -178,7 +178,7 @@
         const vendorNama = $('vendorFilter').value;
         const satuanFilter = $('satuanFilter').value;
 
-        if (tipe === 'stok' && searchTerm) {
+        if ((tipe === 'stok' || tipe === 'pemakaian_vendor') && searchTerm) {
           filtered = filtered.filter(item =>
             (item.nama_sparepart || item.nama_barang || '').toLowerCase().includes(searchTerm)
           );
@@ -288,15 +288,53 @@
 
             const vendorNama = $('vendorFilter').value.trim();
             const vendorId = vendorNama ? state.vendorNameToId[vendorNama] : '';
-            const barang = $('barangFilter').value;
+            const barang = $('barangFilter').value.trim();
             const kendaraanId = state.kendaraanLabelToId[$('kendaraanFilter').value] || '';
             const noSeri = $('noSeriFilter').value.trim();
 
-            const masukParams = (masukType && masukRange.start && masukRange.end) ? `&masuk_start=${masukRange.start}&masuk_end=${masukRange.end}` : '';
+            const masukParams = (masukType && masukType !== 'semua' && masukRange.start && masukRange.end) ? `&masuk_start=${masukRange.start}&masuk_end=${masukRange.end}` : '';
             const pemakaianParams = (pemakaianType && pemakaianType !== 'semua' && pemakaianRange.start && pemakaianRange.end) ? `&pemakaian_start=${pemakaianRange.start}&pemakaian_end=${pemakaianRange.end}` : '';
             const noSeriParam = noSeri ? `&no_seri=${encodeURIComponent(noSeri)}` : '';
+            const vendorParam = vendorId ? `&vendor=${vendorId}` : '';
+            const kendaraanParam = kendaraanId ? `&kendaraan=${kendaraanId}` : '';
+            const barangParam = barang ? `&barang=${encodeURIComponent(barang)}` : '';
+            const namaOliParam = barang ? `&nama_oli=${encodeURIComponent(barang)}` : '';
+            const merkBanParam = barang ? `&merkBan=${encodeURIComponent(barang)}` : '';
 
-             url = `/pemakaian_vendor?vendor=${vendorId}&barang=${barang}&kendaraan=${kendaraanId}${masukParams}${pemakaianParams}${noSeriParam}`;
+            const sparepartUrl = `/pemakaian_vendor?${vendorParam}${barangParam}${kendaraanParam}${masukParams}${pemakaianParams}${noSeriParam}`;
+            const oliUrl = `/rekap/pemakaian_per_bon?${vendorParam}${namaOliParam}${kendaraanParam}${masukParams}${pemakaianParams}${noSeriParam}`;
+            const banUrl = `/pemakaian_ban_per_masuk?${vendorParam}${merkBanParam}${kendaraanParam}${masukParams}${pemakaianParams}`;
+
+            const [sparepartData, oliData, banData] = await Promise.all([
+              api.fetch(sparepartUrl),
+              api.fetch(oliUrl),
+              api.fetch(banUrl)
+            ]);
+
+            const normalized = [
+              ...sparepartData.map(row => ({
+                ...row,
+                source: 'sparepart'
+              })),
+              ...oliData.map(row => ({
+                ...row,
+                nama_sparepart: row.nama_oli || row.nama_sparepart || '',
+                jumlah: row.jumlah_pakai || row.jumlah || 0,
+                tanggal_masuk: row.tanggal_masuk || row.tanggal_masuk,
+                tanggal_pemakaian: row.tanggal_pemakaian || row.tanggal_pakai || row.tanggal || '',
+                satuan: row.satuan || 'liter',
+                source: 'oli'
+              })),
+              ...banData.map(row => ({
+                ...row,
+                nama_sparepart: row.merk_ban ? `Ban ${row.merk_ban}` : row.nama_sparepart || '',
+                jumlah: row.jumlah || 1,
+                satuan: row.satuan || 'pcs',
+                tanggal_masuk: row.tgl_ban_masuk || row.tanggal_masuk || '',
+                tanggal_pemakaian: row.tanggal_pemakaian || '',
+                source: 'ban'
+              }))
+            ];
 
             state.currentFilter = {
               vendor: vendorId,
@@ -314,6 +352,11 @@
               filterType: `${masukType}|${pemakaianType}`,
               tipe: 'pemakaian_vendor'
             };
+
+            state.allData = normalized;
+            this.renderTable(this.applyFilters(normalized));
+            $('lowStockAlert').classList.add('filter-hidden');
+            return;
           }
 
           const data = await api.fetch(url);
@@ -1013,7 +1056,7 @@
       } else if (tipe === 'kendaraan' || tipe === 'pemakaian_vendor') {
         // Reset pemakaian-specific controls nicely
         if (tipe === 'pemakaian_vendor') {
-          $('filterMasukType').value = 'hari';
+          $('filterMasukType').value = 'semua';
           $('filterMasukStart').value = '';
           $('filterMasukEnd').value = '';
           $('filterMasukStartGroup').classList.add('filter-hidden');

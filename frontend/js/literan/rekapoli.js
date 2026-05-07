@@ -332,6 +332,10 @@ applyClientFilters(data) {
         if (vendorId) params.append('vendor', vendorId);
         if (namaOli) params.append('nama_oli', namaOli);
         if (noSeri) params.append('no_seri', noSeri);
+        if (dateRange.start && dateRange.end) {
+          params.append('start', dateRange.start);
+          params.append('end', dateRange.end);
+        }
 
         state.currentFilter = {
           vendor: vendorId,
@@ -1409,7 +1413,7 @@ $('tipeLaporan').addEventListener('change', function() {
 $('filterType').addEventListener('change', function() {
   const isManual = this.value === 'manual';
   const tipe = $('tipeLaporan').value;
-  const showFor = ['oli_masuk','pemakaian_oli'];
+  const showFor = ['oli_masuk','oli_tersedia','pemakaian_oli'];
 
   if (showFor.includes(tipe)) {
     $('filterStartGroup').classList.toggle('filter-hidden', !isManual);
