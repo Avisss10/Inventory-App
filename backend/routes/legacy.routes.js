@@ -1074,6 +1074,250 @@ router.get("/api/pemakaian_vendor", (req, res) => {
     }
 });
 
+// GET /rekap/sisa_stok
+// Page: rekapsemua.html | JS: js/sparepart/rekapsemua.js
+// Fungsi: Rekap sisa stok per barang (masuk - pemakaian = sisa)
+router.get("/api/rekap/sisa_stok", (req, res) => {
+    try {
+        let {
+            masuk_start, masuk_end,
+            pemakaian_start, pemakaian_end,
+            vendor, barang, kendaraan, satuan, no_seri
+        } = req.query;
+
+        const dateRE = /^\d{4}-\d{2}-\d{2}$/;
+        const checkDate = (label, val) => {
+            if (val && !dateRE.test(val)) return `${label} harus format YYYY-MM-DD`;
+            return null;
+        };
+        const errMsg =
+            checkDate('masuk_start', masuk_start) ||
+            checkDate('masuk_end', masuk_end) ||
+            checkDate('pemakaian_start', pemakaian_start) ||
+            checkDate('pemakaian_end', pemakaian_end);
+        if (errMsg) return res.status(400).json({ error: errMsg });
+
+        // Normalize ranges
+        if (masuk_start && masuk_end && masuk_start > masuk_end) {
+            [masuk_start, masuk_end] = [masuk_end, masuk_start];
+        }
+        if (pemakaian_start && pemakaian_end && pemakaian_start > pemakaian_end) {
+            [pemakaian_start, pemakaian_end] = [pemakaian_end, pemakaian_start];
+        }
+
+        // ----------------------------------------------------------------
+        // BAGIAN 1: SPAREPART
+        // Masuk dari barang_masuk, pemakaian dari pemakaian_sparepart
+        // ----------------------------------------------------------------
+        let sqlSparepart = `
+            SELECT
+                bm.id                           AS id_masuk,
+                bm.tgl_sparepart_masuk          AS tanggal_masuk,
+                bm.nama_sparepart               AS nama_barang,
+                bm.no_seri                      AS no_seri,
+                bm.satuan                       AS satuan,
+                bm.harga                        AS harga,
+                bm.jumlah                       AS jumlah_masuk,
+                v.nama_vendor                   AS nama_vendor,
+                'Sparepart'                     AS jenis,
+                COALESCE(
+                    (
+                        SELECT SUM(p.jumlah)
+                        FROM pemakaian_sparepart p
+                        JOIN stok_sparepart s ON p.sparepart_id = s.id
+                        WHERE s.id = bm.id
+                        ${pemakaian_start && pemakaian_end ? 'AND DATE(p.tanggal) BETWEEN ? AND ?' :
+                          pemakaian_start ? 'AND DATE(p.tanggal) = ?' :
+                          pemakaian_end   ? 'AND DATE(p.tanggal) = ?' : ''}
+                        ${kendaraan ? 'AND p.kendaraan_id = ?' : ''}
+                    ), 0
+                )                               AS jumlah_pakai
+            FROM barang_masuk bm
+            LEFT JOIN vendor v ON bm.id_vendor = v.id
+            WHERE 1=1
+        `;
+        const paramsSparepart = [];
+
+        // Pemakaian sub-params (untuk subquery di atas)
+        if (pemakaian_start && pemakaian_end) { paramsSparepart.push(pemakaian_start, pemakaian_end); }
+        else if (pemakaian_start) { paramsSparepart.push(pemakaian_start); }
+        else if (pemakaian_end)   { paramsSparepart.push(pemakaian_end); }
+        if (kendaraan) paramsSparepart.push(kendaraan);
+
+        // Filter masuk
+        if (masuk_start && masuk_end) {
+            sqlSparepart += " AND DATE(bm.tgl_sparepart_masuk) BETWEEN ? AND ?";
+            paramsSparepart.push(masuk_start, masuk_end);
+        } else if (masuk_start) {
+            sqlSparepart += " AND DATE(bm.tgl_sparepart_masuk) = ?";
+            paramsSparepart.push(masuk_start);
+        } else if (masuk_end) {
+            sqlSparepart += " AND DATE(bm.tgl_sparepart_masuk) = ?";
+            paramsSparepart.push(masuk_end);
+        }
+        if (vendor) { sqlSparepart += " AND bm.id_vendor = ?"; paramsSparepart.push(vendor); }
+        if (barang) { sqlSparepart += " AND bm.nama_sparepart LIKE ?"; paramsSparepart.push(`%${barang}%`); }
+        if (satuan && satuan !== 'semua') { sqlSparepart += " AND bm.satuan = ?"; paramsSparepart.push(satuan); }
+        if (no_seri) { sqlSparepart += " AND bm.no_seri LIKE ?"; paramsSparepart.push(`%${no_seri}%`); }
+
+        // ----------------------------------------------------------------
+        // BAGIAN 2: OLI
+        // Masuk dari oli_masuk (id_oli_lama IS NULL = entry baru, bukan gabungan)
+        // Pemakaian dari pemakaian_oli
+        // ----------------------------------------------------------------
+        let sqlOli = `
+            SELECT
+                om.id                           AS id_masuk,
+                om.tanggal_masuk                AS tanggal_masuk,
+                om.nama_oli                     AS nama_barang,
+                om.no_seri                      AS no_seri,
+                om.satuan                       AS satuan,
+                om.harga                        AS harga,
+                om.total_masuk                  AS jumlah_masuk,
+                v.nama_vendor                   AS nama_vendor,
+                'Oli'                           AS jenis,
+                COALESCE(
+                    (
+                        SELECT SUM(po.jumlah_pakai)
+                        FROM pemakaian_oli po
+                        WHERE po.id_oli_masuk = om.id
+                        ${pemakaian_start && pemakaian_end ? 'AND DATE(po.tanggal_pakai) BETWEEN ? AND ?' :
+                          pemakaian_start ? 'AND DATE(po.tanggal_pakai) = ?' :
+                          pemakaian_end   ? 'AND DATE(po.tanggal_pakai) = ?' : ''}
+                        ${kendaraan ? 'AND po.id_kendaraan = ?' : ''}
+                    ), 0
+                )                               AS jumlah_pakai
+            FROM oli_masuk om
+            LEFT JOIN vendor v ON om.id_vendor = v.id
+            WHERE om.id_oli_lama IS NULL
+        `;
+        const paramsOli = [];
+
+        if (pemakaian_start && pemakaian_end) { paramsOli.push(pemakaian_start, pemakaian_end); }
+        else if (pemakaian_start) { paramsOli.push(pemakaian_start); }
+        else if (pemakaian_end)   { paramsOli.push(pemakaian_end); }
+        if (kendaraan) paramsOli.push(kendaraan);
+
+        if (masuk_start && masuk_end) {
+            sqlOli += " AND DATE(om.tanggal_masuk) BETWEEN ? AND ?";
+            paramsOli.push(masuk_start, masuk_end);
+        } else if (masuk_start) {
+            sqlOli += " AND DATE(om.tanggal_masuk) = ?";
+            paramsOli.push(masuk_start);
+        } else if (masuk_end) {
+            sqlOli += " AND DATE(om.tanggal_masuk) = ?";
+            paramsOli.push(masuk_end);
+        }
+        if (vendor) { sqlOli += " AND om.id_vendor = ?"; paramsOli.push(vendor); }
+        if (barang) { sqlOli += " AND om.nama_oli LIKE ?"; paramsOli.push(`%${barang}%`); }
+        if (satuan && satuan !== 'semua') { sqlOli += " AND om.satuan = ?"; paramsOli.push(satuan); }
+        if (no_seri) { sqlOli += " AND om.no_seri LIKE ?"; paramsOli.push(`%${no_seri}%`); }
+
+        // ----------------------------------------------------------------
+        // BAGIAN 3: BAN
+        // Masuk dari stok_ban, pemakaian dari penukaran_ban
+        // ----------------------------------------------------------------
+        let sqlBan = `
+            SELECT
+                sb.id                           AS id_masuk,
+                sb.tgl_ban_masuk                AS tanggal_masuk,
+                CONCAT('Ban ', sb.merk_ban)     AS nama_barang,
+                sb.no_seri                      AS no_seri,
+                sb.satuan                       AS satuan,
+                sb.harga                        AS harga,
+                sb.jumlah                       AS jumlah_masuk,
+                v.nama_vendor                   AS nama_vendor,
+                'Ban'                           AS jenis,
+                COALESCE(
+                    (
+                        SELECT COUNT(*)
+                        FROM penukaran_ban pb
+                        WHERE pb.id_stok = sb.id
+                        ${pemakaian_start && pemakaian_end ? 'AND DATE(pb.tgl_pasang_ban_baru) BETWEEN ? AND ?' :
+                          pemakaian_start ? 'AND DATE(pb.tgl_pasang_ban_baru) = ?' :
+                          pemakaian_end   ? 'AND DATE(pb.tgl_pasang_ban_baru) = ?' : ''}
+                        ${kendaraan ? 'AND pb.id_kendaraan = ?' : ''}
+                    ), 0
+                )                               AS jumlah_pakai
+            FROM stok_ban sb
+            LEFT JOIN vendor v ON sb.id_vendor = v.id
+            WHERE 1=1
+        `;
+        const paramsBan = [];
+
+        if (pemakaian_start && pemakaian_end) { paramsBan.push(pemakaian_start, pemakaian_end); }
+        else if (pemakaian_start) { paramsBan.push(pemakaian_start); }
+        else if (pemakaian_end)   { paramsBan.push(pemakaian_end); }
+        if (kendaraan) paramsBan.push(kendaraan);
+
+        if (masuk_start && masuk_end) {
+            sqlBan += " AND DATE(sb.tgl_ban_masuk) BETWEEN ? AND ?";
+            paramsBan.push(masuk_start, masuk_end);
+        } else if (masuk_start) {
+            sqlBan += " AND DATE(sb.tgl_ban_masuk) = ?";
+            paramsBan.push(masuk_start);
+        } else if (masuk_end) {
+            sqlBan += " AND DATE(sb.tgl_ban_masuk) = ?";
+            paramsBan.push(masuk_end);
+        }
+        if (vendor) { sqlBan += " AND sb.id_vendor = ?"; paramsBan.push(vendor); }
+        if (barang) { sqlBan += " AND CONCAT('Ban ', sb.merk_ban) LIKE ?"; paramsBan.push(`%${barang}%`); }
+        if (satuan && satuan !== 'semua') { sqlBan += " AND sb.satuan = ?"; paramsBan.push(satuan); }
+        if (no_seri) { sqlBan += " AND sb.no_seri LIKE ?"; paramsBan.push(`%${no_seri}%`); }
+
+        // ----------------------------------------------------------------
+        // Jalankan ketiga query secara parallel
+        // ----------------------------------------------------------------
+        Promise.all([
+            new Promise((resolve, reject) => {
+                db.query(sqlSparepart, paramsSparepart, (err, results) => {
+                    if (err) reject(err); else resolve(results);
+                });
+            }),
+            new Promise((resolve, reject) => {
+                db.query(sqlOli, paramsOli, (err, results) => {
+                    if (err) reject(err); else resolve(results);
+                });
+            }),
+            new Promise((resolve, reject) => {
+                db.query(sqlBan, paramsBan, (err, results) => {
+                    if (err) reject(err); else resolve(results);
+                });
+            })
+        ])
+        .then(([sparepartData, oliData, banData]) => {
+            // Gabungkan & hitung sisa
+            const combined = [
+                ...sparepartData,
+                ...oliData,
+                ...banData
+            ].map(row => ({
+                ...row,
+                jumlah_masuk: parseFloat(row.jumlah_masuk) || 0,
+                jumlah_pakai: parseFloat(row.jumlah_pakai) || 0,
+                sisa_stok: (parseFloat(row.jumlah_masuk) || 0) - (parseFloat(row.jumlah_pakai) || 0)
+            }));
+
+            // Sort by tanggal_masuk DESC
+            combined.sort((a, b) => {
+                if (!a.tanggal_masuk) return 1;
+                if (!b.tanggal_masuk) return -1;
+                return new Date(b.tanggal_masuk) - new Date(a.tanggal_masuk);
+            });
+
+            res.json(combined);
+        })
+        .catch(err => {
+            console.error("Error /rekap/sisa_stok:", err);
+            res.status(500).json({ error: err.sqlMessage || err.message });
+        });
+
+    } catch (err) {
+        console.error("Exception /rekap/sisa_stok:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // ========================================
 // HISTORI PEMAKAIAN ENDPOINTS
 // ========================================
