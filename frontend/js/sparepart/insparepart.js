@@ -29,7 +29,7 @@ function formatQuantity(num) {
 
 // ===== LOAD VENDOR =====
 async function loadVendors() {
-    const res = await fetch("http://localhost:3000/api/vendor");
+    const res = await fetch("/api/vendor");
     const data = await res.json();
     const vendorList = document.getElementById("vendorList");
     vendorList.innerHTML = '';
@@ -44,7 +44,7 @@ async function loadVendors() {
 
 // ===== LOAD SPAREPART =====
 async function loadSparepart() {
-    const res = await fetch("http://localhost:3000/api/sparepart");
+    const res = await fetch("/api/sparepart");
     let data = await res.json();
     if (!Array.isArray(data)) data = [];
     sparepartData = data;
@@ -57,7 +57,7 @@ function renderTable() {
     const filter = filterInput.value.toLowerCase();
     let filteredData = sparepartData.filter(sparepart =>
         (sparepart.nama_sparepart.toLowerCase().includes(filter) ||
-        sparepart.no_seri.toLowerCase().includes(filter))
+        (sparepart.no_seri || '').toLowerCase().includes(filter))
     );
 
     const start = (currentPage - 1) * rowsPerPage;
@@ -97,7 +97,7 @@ function renderPagination() {
     const filter = filterInput.value.toLowerCase();
     let filteredData = sparepartData.filter(sparepart =>
         (sparepart.nama_sparepart.toLowerCase().includes(filter) ||
-        sparepart.no_seri.toLowerCase().includes(filter))
+        (sparepart.no_seri || '').toLowerCase().includes(filter))
     );
     const totalPages = Math.ceil(filteredData.length / rowsPerPage);
     const paginationDiv = document.getElementById('pagination');
@@ -173,7 +173,7 @@ form.addEventListener("submit", async function(e) {
     };
 
     // Hanya POST (insert baru), tidak ada PUT (edit) di sini
-    const res = await fetch("http://localhost:3000/api/sparepart", {
+    const res = await fetch("/api/sparepart", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data)
@@ -226,8 +226,8 @@ async function editSparepart(id) {
     try {
         // ambil data dari kedua endpoint
         const [sparepartRes, barangMasukRes] = await Promise.all([
-            fetch(`http://localhost:3000/api/sparepart/${id}`),
-            fetch(`http://localhost:3000/api/barang_masuk/${id}`)
+            fetch(`/api/sparepart/${id}`),
+            fetch(`/api/barang_masuk/${id}`)
         ]);
 
         if (!sparepartRes.ok || !barangMasukRes.ok) {
@@ -324,12 +324,12 @@ async function saveBothIndependently() {
     try {
         // Kirim PUT ke kedua endpoint secara terpisah
         const [resBM, resSP] = await Promise.all([
-            fetch(`http://localhost:3000/api/barang_masuk/${bm_id.value}`, {
+            fetch(`/api/barang_masuk/${bm_id.value}`, {
                 method: 'PUT',
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payloadBM)
             }),
-            fetch(`http://localhost:3000/api/sparepart/${sp_id.value}`, {
+            fetch(`/api/sparepart/${sp_id.value}`, {
                 method: 'PUT',
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payloadSP)
@@ -391,19 +391,14 @@ sp_harga.addEventListener('input', function(e){
     e.target.value = rawValue ? Number(rawValue).toLocaleString('id-ID') : '';
 });
 
-bm_harga.addEventListener('input', function(e) {
-    if (isSettingValue) return;
-    const rawValue = e.target.value.replace(/\D/g, '');
-    e.target.value = rawValue ? Number(rawValue).toLocaleString('id-ID') : '';
-});
 
 // ===== DELETE =====
 async function deleteSparepart(id) {
     try {
         // Fetch data from both tables
         const [sparepartRes, barangMasukRes] = await Promise.all([
-            fetch(`http://localhost:3000/api/sparepart/${id}`),
-            fetch(`http://localhost:3000/api/barang_masuk/${id}`)
+            fetch(`/api/sparepart/${id}`),
+            fetch(`/api/barang_masuk/${id}`)
         ]);
 
         if (!sparepartRes.ok || !barangMasukRes.ok) {
@@ -446,7 +441,7 @@ Data Barang Masuk:
         if (!confirm(message)) return;
 
         // Proceed with delete
-        const res = await fetch(`http://localhost:3000/api/sparepart/${id}`, { method: "DELETE" });
+        const res = await fetch(`/api/sparepart/${id}`, { method: "DELETE" });
         const result = await res.json();
         alert(result.message);
         loadSparepart();

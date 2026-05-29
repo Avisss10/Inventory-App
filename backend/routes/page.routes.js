@@ -50,7 +50,7 @@ router.get('/pemakaian', (req, res) => {
     res.sendFile(path.join(frontendPath, 'pemakaian.html'));
 });
 
-router.get('editpemakaian', (req, res) => {
+router.get('/editpemakaian', (req, res) => {
     res.sendFile(path.join(frontendPath, 'editpemakaian.html'));    
 });
 

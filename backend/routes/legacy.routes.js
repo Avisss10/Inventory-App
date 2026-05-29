@@ -3173,27 +3173,44 @@ router.put("/api/oli_masuk/:id", (req, res) => {
                     });
                 }
 
-                // 2. Update stok_oli
+                // 2. Hitung total yang sudah dipakai agar stok tidak salah setelah edit
                 db.query(
-                    `UPDATE stok_oli SET total_stok = ? WHERE id_oli_masuk = ?`,
-                    [totalMasuk, id],
-                    (err2) => {
+                    `SELECT COALESCE(SUM(jumlah_pakai), 0) AS totalDipakai FROM pemakaian_oli WHERE id_oli_masuk = ?`,
+                    [id],
+                    (err2, dipakaiResult) => {
                         if (err2) {
                             return db.rollback(() => {
-                                console.error("Error update stok_oli:", err2);
+                                console.error("Error query pemakaian_oli:", err2);
                                 res.status(500).json({ error: err2.sqlMessage || err2.message });
                             });
                         }
 
-                        db.commit((err3) => {
-                            if (err3) {
-                                return db.rollback(() => {
-                                    console.error("Error commit update oli_masuk:", err3);
-                                    res.status(500).json({ error: err3.sqlMessage || err3.message });
+                        const totalDipakai = parseFloat(dipakaiResult[0].totalDipakai) || 0;
+                        const stokBaru = Math.max(0, totalMasuk - totalDipakai);
+
+                        // 3. Update stok_oli dengan memperhitungkan pemakaian yang sudah ada
+                        db.query(
+                            `UPDATE stok_oli SET total_stok = ? WHERE id_oli_masuk = ?`,
+                            [stokBaru, id],
+                            (err3) => {
+                                if (err3) {
+                                    return db.rollback(() => {
+                                        console.error("Error update stok_oli:", err3);
+                                        res.status(500).json({ error: err3.sqlMessage || err3.message });
+                                    });
+                                }
+
+                                db.commit((err4) => {
+                                    if (err4) {
+                                        return db.rollback(() => {
+                                            console.error("Error commit update oli_masuk:", err4);
+                                            res.status(500).json({ error: err4.sqlMessage || err4.message });
+                                        });
+                                    }
+                                    res.json({ message: "Oli masuk berhasil diperbarui" });
                                 });
                             }
-                            res.json({ message: "Oli masuk berhasil diperbarui" });
-                        });
+                        );
                     }
                 );
             }
@@ -3533,6 +3550,7 @@ router.get("/api/rekap/oli_tersedia", (req, res) => {
     JOIN oli_masuk om ON so.id_oli_masuk = om.id
     LEFT JOIN vendor v ON om.id_vendor = v.id
     LEFT JOIN oli_masuk om_lama ON om.id_oli_lama = om_lama.id
+    WHERE 1=1
   `;
 
     const params = [];
