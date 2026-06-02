@@ -174,7 +174,7 @@ router.delete("/api/kendaraan/:id", (req, res) => {
 // Fungsi: Menyimpan data output barang (pengeluaran barang langsung ke kendaraan)
 router.post("/api/barang", (req, res) => {
     const { no_seri, nama_barang, merk, jumlah, satuan, harga, vendor_id, kendaraan_id, penanggung_jawab, tanggal } = req.body;
-    const processedJumlah = satuan.toLowerCase().includes('liter') ? String(jumlah).replace(',', '.') : jumlah;
+    const processedJumlah = (satuan || '').toLowerCase().includes('liter') ? String(jumlah).replace(',', '.') : jumlah;
     const jumlahNum = parseFloat(processedJumlah) || 0;
 
     db.query(
@@ -194,6 +194,8 @@ router.post("/api/barang", (req, res) => {
 // Page: rekap.html | JS: js/barang/rekap.js
 // Fungsi: Mengambil data barang untuk laporan rekap lama (dari tabel barang)
 router.get("/api/barang", (req, res) => {
+    const limitVal = parseInt(req.query.limit) || 5000;
+    const offsetVal = parseInt(req.query.offset) || 0;
     const sql = `
     SELECT b.id, b.no_seri, b.nama_barang, b.jumlah, b.satuan, b.harga,
            v.nama_vendor, k.dt_mobil, k.plat,
@@ -202,9 +204,10 @@ router.get("/api/barang", (req, res) => {
     LEFT JOIN vendor v ON b.vendor_id = v.id
     LEFT JOIN kendaraan k ON b.kendaraan_id = k.id
     ORDER BY b.id DESC
+    LIMIT ? OFFSET ?
   `;
 
-    db.query(sql, (err, results) => {
+    db.query(sql, [limitVal, offsetVal], (err, results) => {
         if (err) {
             console.error("Error /barang GET:", err);
             return res.status(500).json({ error: err.sqlMessage || err.message });
@@ -286,7 +289,7 @@ router.get("/api/barang_masuk/:id", (req, res) => {
 router.put("/api/barang_masuk/:id", (req, res) => {
     const { id } = req.params;
     const { tgl_sparepart_masuk, nama_sparepart, no_seri, jumlah, satuan, harga, id_vendor } = req.body;
-    const processedJumlah = satuan.toLowerCase().includes('liter') ? String(jumlah).replace(',', '.') : jumlah;
+    const processedJumlah = (satuan || '').toLowerCase().includes('liter') ? String(jumlah).replace(',', '.') : jumlah;
     const jumlahNum = parseFloat(processedJumlah) || 0;
     const hargaNum = parseInt(harga) || 0;
 
@@ -330,61 +333,69 @@ router.get("/api/stok_sparepart", (req, res) => {
 // Fungsi: Menambahkan sparepart baru (INSERT ke stok_sparepart dan barang_masuk dalam transaction)
 router.post("/api/sparepart", (req, res) => {
     const { tgl_sparepart_masuk, nama_sparepart, no_seri, jumlah, satuan, harga, id_vendor } = req.body;
-    const processedJumlah = satuan.toLowerCase().includes('liter') ? String(jumlah).replace(',', '.') : jumlah;
+    const processedJumlah = (satuan || '').toLowerCase().includes('liter') ? String(jumlah).replace(',', '.') : jumlah;
     const jumlahNum = parseFloat(processedJumlah) || 0;
     const hargaNum = parseInt(harga) || 0;
 
-    db.beginTransaction((err) => {
-        if (err) {
-            console.error("Error beginTransaction sparepart:", err);
-            return res.status(500).json({ error: err.sqlMessage || err.message });
-        }
+    db.getConnection((connErr, conn) => {
+        if (connErr) return res.status(500).json({ error: connErr.message });
+        conn.beginTransaction((err) => {
+            if (err) {
+                conn.release();
+                console.error("Error beginTransaction sparepart:", err);
+                return res.status(500).json({ error: err.sqlMessage || err.message });
+            }
 
-        // 1. Insert ke stok_sparepart tanpa PPN
-        db.query(
-            "INSERT INTO stok_sparepart (tgl_sparepart_masuk, nama_sparepart, no_seri, jumlah, satuan, harga, id_vendor) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            [tgl_sparepart_masuk, nama_sparepart, no_seri, jumlahNum, satuan, hargaNum, id_vendor],
-            (err, result) => {
-                if (err) {
-                    return db.rollback(() => {
-                        console.error("Error insert stok_sparepart:", err);
-                        res.status(500).json({ error: err.sqlMessage || err.message });
-                    });
-                }
+            // 1. Insert ke stok_sparepart tanpa PPN
+            conn.query(
+                "INSERT INTO stok_sparepart (tgl_sparepart_masuk, nama_sparepart, no_seri, jumlah, satuan, harga, id_vendor) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                [tgl_sparepart_masuk, nama_sparepart, no_seri, jumlahNum, satuan, hargaNum, id_vendor],
+                (err, result) => {
+                    if (err) {
+                        return conn.rollback(() => {
+                            conn.release();
+                            console.error("Error insert stok_sparepart:", err);
+                            res.status(500).json({ error: err.sqlMessage || err.message });
+                        });
+                    }
 
-                const stokId = result.insertId;
+                    const stokId = result.insertId;
 
-                // 2. Insert ke barang_masuk tanpa PPN
-                db.query(
-                    "INSERT INTO barang_masuk (tgl_sparepart_masuk, nama_sparepart, no_seri, jumlah, satuan, harga, id_vendor) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    [tgl_sparepart_masuk, nama_sparepart, no_seri, jumlahNum, satuan, hargaNum, id_vendor],
-                    (err2, result2) => {
-                        if (err2) {
-                            return db.rollback(() => {
-                                console.error("Error insert barang_masuk:", err2);
-                                res.status(500).json({ error: err2.sqlMessage || err2.message });
-                            });
-                        }
-
-                        // 3. Commit transaction
-                        db.commit((err3) => {
-                            if (err3) {
-                                return db.rollback(() => {
-                                    console.error("Error commit sparepart:", err3);
-                                    res.status(500).json({ error: err3.sqlMessage || err3.message });
+                    // 2. Insert ke barang_masuk tanpa PPN
+                    conn.query(
+                        "INSERT INTO barang_masuk (tgl_sparepart_masuk, nama_sparepart, no_seri, jumlah, satuan, harga, id_vendor) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                        [tgl_sparepart_masuk, nama_sparepart, no_seri, jumlahNum, satuan, hargaNum, id_vendor],
+                        (err2, result2) => {
+                            if (err2) {
+                                return conn.rollback(() => {
+                                    conn.release();
+                                    console.error("Error insert barang_masuk:", err2);
+                                    res.status(500).json({ error: err2.sqlMessage || err2.message });
                                 });
                             }
 
-                            res.json({
-                                message: "Sparepart berhasil ditambahkan ke stok dan barang masuk",
-                                stok_id: stokId,
-                                barang_masuk_id: result2.insertId
+                            // 3. Commit transaction
+                            conn.commit((err3) => {
+                                if (err3) {
+                                    return conn.rollback(() => {
+                                        conn.release();
+                                        console.error("Error commit sparepart:", err3);
+                                        res.status(500).json({ error: err3.sqlMessage || err3.message });
+                                    });
+                                }
+
+                                conn.release();
+                                res.json({
+                                    message: "Sparepart berhasil ditambahkan ke stok dan barang masuk",
+                                    stok_id: stokId,
+                                    barang_masuk_id: result2.insertId
+                                });
                             });
-                        });
-                    }
-                );
-            }
-        );
+                        }
+                    );
+                }
+            );
+        });
     });
 });
 
@@ -393,7 +404,7 @@ router.post("/api/sparepart", (req, res) => {
 router.put("/api/sparepart/:id", (req, res) => {
     const { id } = req.params;
     const { tgl_sparepart_masuk, nama_sparepart, no_seri, jumlah, satuan, harga, id_vendor } = req.body;
-    const processedJumlah = satuan.toLowerCase().includes('liter') ? String(jumlah).replace(',', '.') : jumlah;
+    const processedJumlah = (satuan || '').toLowerCase().includes('liter') ? String(jumlah).replace(',', '.') : jumlah;
     const jumlahNum = parseFloat(processedJumlah) || 0;
     const hargaNum = parseInt(harga) || 0;
 
@@ -419,54 +430,64 @@ router.put("/api/sparepart/:id", (req, res) => {
 router.delete("/api/sparepart/:id", (req, res) => {
     const { id } = req.params;
 
-    db.beginTransaction((err) => {
-        if (err) {
-            console.error("Error beginTransaction delete sparepart:", err);
-            return res.status(500).json({ error: err.sqlMessage || err.message });
-        }
-
-        // 1. Cek apakah sparepart sudah dipakai
-        db.query("SELECT COUNT(*) as total FROM pemakaian_sparepart WHERE sparepart_id=?", [id], (err, result) => {
+    db.getConnection((connErr, conn) => {
+        if (connErr) return res.status(500).json({ error: connErr.message });
+        conn.beginTransaction((err) => {
             if (err) {
-                return db.rollback(() => {
-                    console.error("Error check pemakaian sparepart:", err);
-                    res.status(500).json({ error: err.sqlMessage || err.message });
-                });
+                conn.release();
+                console.error("Error beginTransaction delete sparepart:", err);
+                return res.status(500).json({ error: err.sqlMessage || err.message });
             }
 
-            if (result[0].total > 0) {
-                return db.rollback(() => {
-                    res.status(400).json({ message: "Sparepart sudah dipakai, tidak bisa dihapus" });
-                });
-            }
-
-            // 2. Delete from stok_sparepart
-            db.query("DELETE FROM stok_sparepart WHERE id=?", [id], (err2) => {
-                if (err2) {
-                    return db.rollback(() => {
-                        console.error("Error delete stok_sparepart:", err2);
-                        res.status(500).json({ error: err2.sqlMessage || err2.message });
+            // 1. Cek apakah sparepart sudah dipakai
+            conn.query("SELECT COUNT(*) as total FROM pemakaian_sparepart WHERE sparepart_id=?", [id], (err, result) => {
+                if (err) {
+                    return conn.rollback(() => {
+                        conn.release();
+                        console.error("Error check pemakaian sparepart:", err);
+                        res.status(500).json({ error: err.sqlMessage || err.message });
                     });
                 }
 
-                // 3. Delete from barang_masuk
-                db.query("DELETE FROM barang_masuk WHERE id=?", [id], (err3) => {
-                    if (err3) {
-                        return db.rollback(() => {
-                            console.error("Error delete barang_masuk:", err3);
-                            res.status(500).json({ error: err3.sqlMessage || err3.message });
+                if (result[0].total > 0) {
+                    return conn.rollback(() => {
+                        conn.release();
+                        res.status(400).json({ message: "Sparepart sudah dipakai, tidak bisa dihapus" });
+                    });
+                }
+
+                // 2. Delete from stok_sparepart
+                conn.query("DELETE FROM stok_sparepart WHERE id=?", [id], (err2) => {
+                    if (err2) {
+                        return conn.rollback(() => {
+                            conn.release();
+                            console.error("Error delete stok_sparepart:", err2);
+                            res.status(500).json({ error: err2.sqlMessage || err2.message });
                         });
                     }
 
-                    // 4. Commit transaction
-                    db.commit((err4) => {
-                        if (err4) {
-                            return db.rollback(() => {
-                                console.error("Error commit delete sparepart:", err4);
-                                res.status(500).json({ error: err4.sqlMessage || err4.message });
+                    // 3. Delete from barang_masuk
+                    conn.query("DELETE FROM barang_masuk WHERE id=?", [id], (err3) => {
+                        if (err3) {
+                            return conn.rollback(() => {
+                                conn.release();
+                                console.error("Error delete barang_masuk:", err3);
+                                res.status(500).json({ error: err3.sqlMessage || err3.message });
                             });
                         }
-                        res.json({ message: "Sparepart berhasil dihapus dari kedua tabel" });
+
+                        // 4. Commit transaction
+                        conn.commit((err4) => {
+                            if (err4) {
+                                return conn.rollback(() => {
+                                    conn.release();
+                                    console.error("Error commit delete sparepart:", err4);
+                                    res.status(500).json({ error: err4.sqlMessage || err4.message });
+                                });
+                            }
+                            conn.release();
+                            res.json({ message: "Sparepart berhasil dihapus dari kedua tabel" });
+                        });
                     });
                 });
             });
@@ -483,88 +504,99 @@ router.delete("/api/sparepart/:id", (req, res) => {
 // Fungsi: Mencatat pemakaian sparepart (INSERT pemakaian dan UPDATE stok dalam transaction)
 router.post("/api/pemakaian", (req, res) => {
     const { sparepart_id, kendaraan_id, jumlah, satuan, penanggung_jawab, tanggal } = req.body;
-    const processedJumlah = satuan.toLowerCase().includes('liter') ? String(jumlah).replace(',', '.') : jumlah;
+    const processedJumlah = (satuan || '').toLowerCase().includes('liter') ? String(jumlah).replace(',', '.') : jumlah;
     const jumlahNum = parseFloat(processedJumlah) || 0;
 
-    db.beginTransaction((err) => {
-        if (err) {
-            console.error("Error beginTransaction pemakaian:", err);
-            return res.status(500).json({ error: err.sqlMessage || err.message });
-        }
+    db.getConnection((connErr, conn) => {
+        if (connErr) return res.status(500).json({ error: connErr.message });
+        conn.beginTransaction((err) => {
+            if (err) {
+                conn.release();
+                console.error("Error beginTransaction pemakaian:", err);
+                return res.status(500).json({ error: err.sqlMessage || err.message });
+            }
 
-        // 1. Cek stok tersedia
-        db.query(
-            "SELECT jumlah FROM stok_sparepart WHERE id = ?",
-            [sparepart_id],
-            (err, stokResult) => {
-                if (err) {
-                    return db.rollback(() => {
-                        console.error("Error select stok_sparepart:", err);
-                        res.status(500).json({ error: err.sqlMessage || err.message });
-                    });
-                }
-
-                if (!stokResult || stokResult.length === 0) {
-                    return db.rollback(() => {
-                        res.status(404).json({ message: "Sparepart tidak ditemukan" });
-                    });
-                }
-
-                const stokTersedia = parseFloat(stokResult[0].jumlah) || 0;
-
-                // 2. Validasi stok cukup
-                if (stokTersedia < jumlahNum) {
-                    return db.rollback(() => {
-                        res.status(400).json({
-                            message: `Stok tidak cukup! Tersedia: ${stokTersedia}, diminta: ${jumlahNum}`
+            // 1. Cek stok tersedia
+            conn.query(
+                "SELECT jumlah FROM stok_sparepart WHERE id = ? FOR UPDATE",
+                [sparepart_id],
+                (err, stokResult) => {
+                    if (err) {
+                        return conn.rollback(() => {
+                            conn.release();
+                            console.error("Error select stok_sparepart:", err);
+                            res.status(500).json({ error: err.sqlMessage || err.message });
                         });
-                    });
-                }
+                    }
 
-                // 3. Kurangi stok
-                db.query(
-                    "UPDATE stok_sparepart SET jumlah = jumlah - ? WHERE id = ?",
-                    [jumlahNum, sparepart_id],
-                    (err) => {
-                        if (err) {
-                            return db.rollback(() => {
-                                console.error("Error update stok_sparepart:", err);
-                                res.status(500).json({ error: err.sqlMessage || err.message });
+                    if (!stokResult || stokResult.length === 0) {
+                        return conn.rollback(() => {
+                            conn.release();
+                            res.status(404).json({ message: "Sparepart tidak ditemukan" });
+                        });
+                    }
+
+                    const stokTersedia = parseFloat(stokResult[0].jumlah) || 0;
+
+                    // 2. Validasi stok cukup
+                    if (stokTersedia < jumlahNum) {
+                        return conn.rollback(() => {
+                            conn.release();
+                            res.status(400).json({
+                                message: `Stok tidak cukup! Tersedia: ${stokTersedia}, diminta: ${jumlahNum}`
                             });
-                        }
+                        });
+                    }
 
-                        // 4. Insert pemakaian
-                        db.query(
-                            "INSERT INTO pemakaian_sparepart (sparepart_id, kendaraan_id, jumlah, satuan, penanggung_jawab, tanggal) VALUES (?, ?, ?, ?, ?, ?)",
-                            [sparepart_id, kendaraan_id, jumlahNum, satuan, penanggung_jawab, tanggal],
-                            (err, result) => {
-                                if (err) {
-                                    return db.rollback(() => {
-                                        console.error("Error insert pemakaian_sparepart:", err);
-                                        res.status(500).json({ error: err.sqlMessage || err.message });
-                                    });
-                                }
+                    // 3. Kurangi stok
+                    conn.query(
+                        "UPDATE stok_sparepart SET jumlah = jumlah - ? WHERE id = ?",
+                        [jumlahNum, sparepart_id],
+                        (err) => {
+                            if (err) {
+                                return conn.rollback(() => {
+                                    conn.release();
+                                    console.error("Error update stok_sparepart:", err);
+                                    res.status(500).json({ error: err.sqlMessage || err.message });
+                                });
+                            }
 
-                                // 5. Commit transaction
-                                db.commit((err) => {
+                            // 4. Insert pemakaian
+                            conn.query(
+                                "INSERT INTO pemakaian_sparepart (sparepart_id, kendaraan_id, jumlah, satuan, penanggung_jawab, tanggal) VALUES (?, ?, ?, ?, ?, ?)",
+                                [sparepart_id, kendaraan_id, jumlahNum, satuan, penanggung_jawab, tanggal],
+                                (err, result) => {
                                     if (err) {
-                                        return db.rollback(() => {
-                                            console.error("Error commit pemakaian_sparepart:", err);
+                                        return conn.rollback(() => {
+                                            conn.release();
+                                            console.error("Error insert pemakaian_sparepart:", err);
                                             res.status(500).json({ error: err.sqlMessage || err.message });
                                         });
                                     }
 
-                                    res.json({
-                                        message: "Pemakaian berhasil disimpan dan stok berkurang",
-                                        id: result.insertId
+                                    // 5. Commit transaction
+                                    conn.commit((err) => {
+                                        if (err) {
+                                            return conn.rollback(() => {
+                                                conn.release();
+                                                console.error("Error commit pemakaian_sparepart:", err);
+                                                res.status(500).json({ error: err.sqlMessage || err.message });
+                                            });
+                                        }
+
+                                        conn.release();
+                                        res.json({
+                                            message: "Pemakaian berhasil disimpan dan stok berkurang",
+                                            id: result.insertId
+                                        });
                                     });
-                                });
-                            }
-                        );
-                    }
-                );
-            }
-        );
+                                }
+                            );
+                        }
+                    );
+                }
+            );
+        });
     });
 });
 
@@ -572,8 +604,10 @@ router.post("/api/pemakaian", (req, res) => {
 // Page: rekapsemua.html | JS: js/sparepart/rekapsemua.js
 // Fungsi: Mengambil data pemakaian sparepart untuk laporan
 router.get("/api/pemakaian", (req, res) => {
+    const limitVal = parseInt(req.query.limit) || 5000;
+    const offsetVal = parseInt(req.query.offset) || 0;
     const sql = `
-    SELECT 
+    SELECT
       p.*,
       s.nama_sparepart,
       s.no_seri,
@@ -583,9 +617,10 @@ router.get("/api/pemakaian", (req, res) => {
     LEFT JOIN stok_sparepart s ON p.sparepart_id = s.id
     LEFT JOIN kendaraan k ON p.kendaraan_id = k.id
     ORDER BY p.tanggal DESC, p.id DESC
+    LIMIT ? OFFSET ?
   `;
 
-    db.query(sql, (err, results) => {
+    db.query(sql, [limitVal, offsetVal], (err, results) => {
         if (err) {
             console.error("Error /pemakaian GET:", err);
             return res.status(500).json({ error: err.sqlMessage || err.message });
@@ -631,7 +666,7 @@ router.get("/api/pemakaian/:id", (req, res) => {
 router.put("/api/pemakaian/:id", (req, res) => {
     const { id } = req.params;
     const { sparepart_id, kendaraan_id, jumlah, satuan, penanggung_jawab, tanggal, keterangan } = req.body;
-    const processedJumlah = satuan.toLowerCase().includes('liter') ? String(jumlah).replace(',', '.') : jumlah;
+    const processedJumlah = (satuan || '').toLowerCase().includes('liter') ? String(jumlah).replace(',', '.') : jumlah;
     const jumlahBaru = parseFloat(processedJumlah) || 0;
 
     // ✅ VALIDASI: Keterangan wajib diisi
@@ -641,113 +676,174 @@ router.put("/api/pemakaian/:id", (req, res) => {
         });
     }
 
-    db.beginTransaction((err) => {
-        if (err) {
-            console.error("Error beginTransaction update pemakaian:", err);
-            return res.status(500).json({ error: err.sqlMessage || err.message });
-        }
+    db.getConnection((connErr, conn) => {
+        if (connErr) return res.status(500).json({ error: connErr.message });
+        conn.beginTransaction((err) => {
+            if (err) {
+                conn.release();
+                console.error("Error beginTransaction update pemakaian:", err);
+                return res.status(500).json({ error: err.sqlMessage || err.message });
+            }
 
-        // 1. Ambil data pemakaian lama untuk histori
-        db.query(
-            "SELECT * FROM pemakaian_sparepart WHERE id = ?",
-            [id],
-            (err, oldData) => {
-                if (err) {
-                    return db.rollback(() => {
-                        console.error("Error get old pemakaian:", err);
-                        res.status(500).json({ error: err.sqlMessage || err.message });
-                    });
-                }
-
-                if (!oldData || oldData.length === 0) {
-                    return db.rollback(() => {
-                        res.status(404).json({ message: "Pemakaian tidak ditemukan" });
-                    });
-                }
-
-                const dataLama = oldData[0];
-                const jumlahLama = parseFloat(dataLama.jumlah) || 0;
-                const sparepartIdLama = dataLama.sparepart_id;
-                const selisih = jumlahLama - jumlahBaru;
-
-                // 2. Simpan ke histori_pemakaian (data SEBELUM edit)
-                db.query(
-                    `INSERT INTO histori_pemakaian 
-                    (sparepart_id, kendaraan_id, jumlah, satuan, penanggung_jawab, tanggal, keterangan) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                    [
-                        dataLama.sparepart_id,
-                        dataLama.kendaraan_id,
-                        dataLama.jumlah,
-                        dataLama.satuan,
-                        dataLama.penanggung_jawab,
-                        dataLama.tanggal,
-                        `EDIT: ${keterangan.trim()}`
-                    ],
-                    (err) => {
-                        if (err) {
-                            return db.rollback(() => {
-                                console.error("Error insert histori:", err);
-                                res.status(500).json({ error: err.sqlMessage || err.message });
-                            });
-                        }
-
-                        // 3. Proses update stok
-                        prosesUpdateStok();
+            // 1. Ambil data pemakaian lama untuk histori
+            conn.query(
+                "SELECT * FROM pemakaian_sparepart WHERE id = ?",
+                [id],
+                (err, oldData) => {
+                    if (err) {
+                        return conn.rollback(() => {
+                            conn.release();
+                            console.error("Error get old pemakaian:", err);
+                            res.status(500).json({ error: err.sqlMessage || err.message });
+                        });
                     }
-                );
 
-                function prosesUpdateStok() {
-                    // Jika sparepart berbeda
-                    if (sparepartIdLama !== sparepart_id) {
-                        // Kembalikan stok sparepart lama
-                        db.query(
-                            "UPDATE stok_sparepart SET jumlah = jumlah + ? WHERE id = ?",
-                            [jumlahLama, sparepartIdLama],
-                            (err) => {
-                                if (err) {
-                                    return db.rollback(() => {
-                                        console.error("Error restore old stock:", err);
-                                        res.status(500).json({ error: err.sqlMessage || err.message });
-                                    });
+                    if (!oldData || oldData.length === 0) {
+                        return conn.rollback(() => {
+                            conn.release();
+                            res.status(404).json({ message: "Pemakaian tidak ditemukan" });
+                        });
+                    }
+
+                    const dataLama = oldData[0];
+                    const jumlahLama = parseFloat(dataLama.jumlah) || 0;
+                    const sparepartIdLama = dataLama.sparepart_id;
+                    const selisih = jumlahLama - jumlahBaru;
+
+                    // 2. Simpan ke histori_pemakaian (data SEBELUM edit)
+                    conn.query(
+                        `INSERT INTO histori_pemakaian
+                        (sparepart_id, kendaraan_id, jumlah, satuan, penanggung_jawab, tanggal, keterangan)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                        [
+                            dataLama.sparepart_id,
+                            dataLama.kendaraan_id,
+                            dataLama.jumlah,
+                            dataLama.satuan,
+                            dataLama.penanggung_jawab,
+                            dataLama.tanggal,
+                            `EDIT: ${keterangan.trim()}`
+                        ],
+                        (err) => {
+                            if (err) {
+                                return conn.rollback(() => {
+                                    conn.release();
+                                    console.error("Error insert histori:", err);
+                                    res.status(500).json({ error: err.sqlMessage || err.message });
+                                });
+                            }
+
+                            // 3. Proses update stok
+                            prosesUpdateStok();
+                        }
+                    );
+
+                    function prosesUpdateStok() {
+                        // Jika sparepart berbeda
+                        if (sparepartIdLama !== sparepart_id) {
+                            // Kembalikan stok sparepart lama
+                            conn.query(
+                                "UPDATE stok_sparepart SET jumlah = jumlah + ? WHERE id = ?",
+                                [jumlahLama, sparepartIdLama],
+                                (err) => {
+                                    if (err) {
+                                        return conn.rollback(() => {
+                                            conn.release();
+                                            console.error("Error restore old stock:", err);
+                                            res.status(500).json({ error: err.sqlMessage || err.message });
+                                        });
+                                    }
+
+                                    // Cek stok sparepart baru
+                                    conn.query(
+                                        "SELECT jumlah FROM stok_sparepart WHERE id = ? FOR UPDATE",
+                                        [sparepart_id],
+                                        (err, newStock) => {
+                                            if (err) {
+                                                return conn.rollback(() => {
+                                                    conn.release();
+                                                    console.error("Error check new stock:", err);
+                                                    res.status(500).json({ error: err.sqlMessage || err.message });
+                                                });
+                                            }
+
+                                            if (!newStock || newStock.length === 0) {
+                                                return conn.rollback(() => {
+                                                    conn.release();
+                                                    res.status(404).json({ message: "Sparepart baru tidak ditemukan" });
+                                                });
+                                            }
+
+                                            const stokTersedia = parseFloat(newStock[0].jumlah) || 0;
+
+                                            if (stokTersedia < jumlahBaru) {
+                                                return conn.rollback(() => {
+                                                    conn.release();
+                                                    res.status(400).json({
+                                                        message: `Stok tidak cukup! Tersedia: ${stokTersedia}, diminta: ${jumlahBaru}`
+                                                    });
+                                                });
+                                            }
+
+                                            // Kurangi stok sparepart baru
+                                            conn.query(
+                                                "UPDATE stok_sparepart SET jumlah = jumlah - ? WHERE id = ?",
+                                                [jumlahBaru, sparepart_id],
+                                                (err) => {
+                                                    if (err) {
+                                                        return conn.rollback(() => {
+                                                            conn.release();
+                                                            console.error("Error reduce new stock:", err);
+                                                            res.status(500).json({ error: err.sqlMessage || err.message });
+                                                        });
+                                                    }
+
+                                                    updatePemakaian();
+                                                }
+                                            );
+                                        }
+                                    );
                                 }
-
-                                // Cek stok sparepart baru
-                                db.query(
-                                    "SELECT jumlah FROM stok_sparepart WHERE id = ?",
+                            );
+                        } else {
+                            // Sparepart sama, hanya update jumlah
+                            if (selisih !== 0) {
+                                conn.query(
+                                    "SELECT jumlah FROM stok_sparepart WHERE id = ? FOR UPDATE",
                                     [sparepart_id],
-                                    (err, newStock) => {
+                                    (err, stokResult) => {
                                         if (err) {
-                                            return db.rollback(() => {
-                                                console.error("Error check new stock:", err);
+                                            return conn.rollback(() => {
+                                                conn.release();
+                                                console.error("Error check stock:", err);
                                                 res.status(500).json({ error: err.sqlMessage || err.message });
                                             });
                                         }
 
-                                        if (!newStock || newStock.length === 0) {
-                                            return db.rollback(() => {
-                                                res.status(404).json({ message: "Sparepart baru tidak ditemukan" });
-                                            });
-                                        }
+                                        const stokTersedia = parseFloat(stokResult[0].jumlah) || 0;
 
-                                        const stokTersedia = parseFloat(newStock[0].jumlah) || 0;
-                                        
-                                        if (stokTersedia < jumlahBaru) {
-                                            return db.rollback(() => {
-                                                res.status(400).json({
-                                                    message: `Stok tidak cukup! Tersedia: ${stokTersedia}, diminta: ${jumlahBaru}`
+                                        // Validasi jika jumlah pemakaian bertambah
+                                        if (selisih < 0) {
+                                            const kebutuhanTambahan = Math.abs(selisih);
+
+                                            if (stokTersedia < kebutuhanTambahan) {
+                                                return conn.rollback(() => {
+                                                    conn.release();
+                                                    res.status(400).json({
+                                                        message: `Stok tidak cukup untuk menambah pemakaian! Stok tersedia: ${stokTersedia}, Perlu tambahan: ${kebutuhanTambahan}`
+                                                    });
                                                 });
-                                            });
+                                            }
                                         }
 
-                                        // Kurangi stok sparepart baru
-                                        db.query(
-                                            "UPDATE stok_sparepart SET jumlah = jumlah - ? WHERE id = ?",
-                                            [jumlahBaru, sparepart_id],
+                                        conn.query(
+                                            "UPDATE stok_sparepart SET jumlah = jumlah + ? WHERE id = ?",
+                                            [selisih, sparepart_id],
                                             (err) => {
                                                 if (err) {
-                                                    return db.rollback(() => {
-                                                        console.error("Error reduce new stock:", err);
+                                                    return conn.rollback(() => {
+                                                        conn.release();
+                                                        console.error("Error update stock:", err);
                                                         res.status(500).json({ error: err.sqlMessage || err.message });
                                                     });
                                                 }
@@ -757,90 +853,47 @@ router.put("/api/pemakaian/:id", (req, res) => {
                                         );
                                     }
                                 );
+                            } else {
+                                updatePemakaian();
                             }
-                        );
-                    } else {
-                        // Sparepart sama, hanya update jumlah
-                        if (selisih !== 0) {
-                            db.query(
-                                "SELECT jumlah FROM stok_sparepart WHERE id = ?",
-                                [sparepart_id],
-                                (err, stokResult) => {
-                                    if (err) {
-                                        return db.rollback(() => {
-                                            console.error("Error check stock:", err);
-                                            res.status(500).json({ error: err.sqlMessage || err.message });
-                                        });
-                                    }
-
-                                    const stokTersedia = parseFloat(stokResult[0].jumlah) || 0;
-
-                                    // Validasi jika jumlah pemakaian bertambah
-                                    if (selisih < 0) {
-                                        const kebutuhanTambahan = Math.abs(selisih);
-                                        
-                                        if (stokTersedia < kebutuhanTambahan) {
-                                            return db.rollback(() => {
-                                                res.status(400).json({
-                                                    message: `Stok tidak cukup untuk menambah pemakaian! Stok tersedia: ${stokTersedia}, Perlu tambahan: ${kebutuhanTambahan}`
-                                                });
-                                            });
-                                        }
-                                    }
-
-                                    db.query(
-                                        "UPDATE stok_sparepart SET jumlah = jumlah + ? WHERE id = ?",
-                                        [selisih, sparepart_id],
-                                        (err) => {
-                                            if (err) {
-                                                return db.rollback(() => {
-                                                    console.error("Error update stock:", err);
-                                                    res.status(500).json({ error: err.sqlMessage || err.message });
-                                                });
-                                            }
-
-                                            updatePemakaian();
-                                        }
-                                    );
-                                }
-                            );
-                        } else {
-                            updatePemakaian();
                         }
                     }
-                }
 
-                function updatePemakaian() {
-                    // 4. Update pemakaian_sparepart
-                    db.query(
-                        "UPDATE pemakaian_sparepart SET sparepart_id=?, kendaraan_id=?, jumlah=?, satuan=?, penanggung_jawab=?, tanggal=? WHERE id=?",
-                        [sparepart_id, kendaraan_id, jumlahBaru, satuan, penanggung_jawab, tanggal, id],
-                        (err) => {
-                            if (err) {
-                                return db.rollback(() => {
-                                    console.error("Error update pemakaian:", err);
-                                    res.status(500).json({ error: err.sqlMessage || err.message });
-                                });
-                            }
-
-                            // 5. Commit transaction
-                            db.commit((err) => {
+                    function updatePemakaian() {
+                        // 4. Update pemakaian_sparepart
+                        conn.query(
+                            "UPDATE pemakaian_sparepart SET sparepart_id=?, kendaraan_id=?, jumlah=?, satuan=?, penanggung_jawab=?, tanggal=? WHERE id=?",
+                            [sparepart_id, kendaraan_id, jumlahBaru, satuan, penanggung_jawab, tanggal, id],
+                            (err) => {
                                 if (err) {
-                                    return db.rollback(() => {
-                                        console.error("Error commit update pemakaian:", err);
+                                    return conn.rollback(() => {
+                                        conn.release();
+                                        console.error("Error update pemakaian:", err);
                                         res.status(500).json({ error: err.sqlMessage || err.message });
                                     });
                                 }
 
-                                res.json({
-                                    message: "Pemakaian berhasil diperbarui, stok disesuaikan, dan histori tersimpan"
+                                // 5. Commit transaction
+                                conn.commit((err) => {
+                                    if (err) {
+                                        return conn.rollback(() => {
+                                            conn.release();
+                                            console.error("Error commit update pemakaian:", err);
+                                            res.status(500).json({ error: err.sqlMessage || err.message });
+                                        });
+                                    }
+
+                                    conn.release();
+                                    res.json({
+                                        message: "Pemakaian berhasil diperbarui, stok disesuaikan, dan histori tersimpan"
+                                    });
                                 });
-                            });
-                        }
-                    );
+                            }
+                        );
+                    }
                 }
-            }
-        );
+            );
+        });
     });
 });
 
@@ -858,101 +911,112 @@ router.delete("/api/pemakaian/:id", (req, res) => {
         });
     }
 
-    db.beginTransaction((err) => {
-        if (err) {
-            console.error("Error beginTransaction delete pemakaian:", err);
-            return res.status(500).json({ error: err.sqlMessage || err.message });
-        }
+    db.getConnection((connErr, conn) => {
+        if (connErr) return res.status(500).json({ error: connErr.message });
+        conn.beginTransaction((err) => {
+            if (err) {
+                conn.release();
+                console.error("Error beginTransaction delete pemakaian:", err);
+                return res.status(500).json({ error: err.sqlMessage || err.message });
+            }
 
-        // 1. Ambil data pemakaian yang akan dihapus
-        db.query(
-            "SELECT * FROM pemakaian_sparepart WHERE id = ?",
-            [id],
-            (err, pemakaianData) => {
-                if (err) {
-                    return db.rollback(() => {
-                        console.error("Error get pemakaian data:", err);
-                        res.status(500).json({ error: err.sqlMessage || err.message });
-                    });
-                }
+            // 1. Ambil data pemakaian yang akan dihapus
+            conn.query(
+                "SELECT * FROM pemakaian_sparepart WHERE id = ?",
+                [id],
+                (err, pemakaianData) => {
+                    if (err) {
+                        return conn.rollback(() => {
+                            conn.release();
+                            console.error("Error get pemakaian data:", err);
+                            res.status(500).json({ error: err.sqlMessage || err.message });
+                        });
+                    }
 
-                if (!pemakaianData || pemakaianData.length === 0) {
-                    return db.rollback(() => {
-                        res.status(404).json({ message: "Pemakaian tidak ditemukan" });
-                    });
-                }
+                    if (!pemakaianData || pemakaianData.length === 0) {
+                        return conn.rollback(() => {
+                            conn.release();
+                            res.status(404).json({ message: "Pemakaian tidak ditemukan" });
+                        });
+                    }
 
-                const data = pemakaianData[0];
-                const jumlah = parseFloat(data.jumlah) || 0;
-                const sparepartId = data.sparepart_id;
+                    const data = pemakaianData[0];
+                    const jumlah = parseFloat(data.jumlah) || 0;
+                    const sparepartId = data.sparepart_id;
 
-                // 2. Simpan ke histori_pemakaian (data SEBELUM hapus)
-                db.query(
-                    `INSERT INTO histori_pemakaian 
-                    (sparepart_id, kendaraan_id, jumlah, satuan, penanggung_jawab, tanggal, keterangan) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                    [
-                        data.sparepart_id,
-                        data.kendaraan_id,
-                        data.jumlah,
-                        data.satuan,
-                        data.penanggung_jawab,
-                        data.tanggal,
-                        `HAPUS: ${keterangan.trim()}`
-                    ],
-                    (err) => {
-                        if (err) {
-                            return db.rollback(() => {
-                                console.error("Error insert histori:", err);
-                                res.status(500).json({ error: err.sqlMessage || err.message });
-                            });
-                        }
+                    // 2. Simpan ke histori_pemakaian (data SEBELUM hapus)
+                    conn.query(
+                        `INSERT INTO histori_pemakaian
+                        (sparepart_id, kendaraan_id, jumlah, satuan, penanggung_jawab, tanggal, keterangan)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                        [
+                            data.sparepart_id,
+                            data.kendaraan_id,
+                            data.jumlah,
+                            data.satuan,
+                            data.penanggung_jawab,
+                            data.tanggal,
+                            `HAPUS: ${keterangan.trim()}`
+                        ],
+                        (err) => {
+                            if (err) {
+                                return conn.rollback(() => {
+                                    conn.release();
+                                    console.error("Error insert histori:", err);
+                                    res.status(500).json({ error: err.sqlMessage || err.message });
+                                });
+                            }
 
-                        // 3. Kembalikan stok
-                        db.query(
-                            "UPDATE stok_sparepart SET jumlah = jumlah + ? WHERE id = ?",
-                            [jumlah, sparepartId],
-                            (err) => {
-                                if (err) {
-                                    return db.rollback(() => {
-                                        console.error("Error restore stock:", err);
-                                        res.status(500).json({ error: err.sqlMessage || err.message });
-                                    });
-                                }
+                            // 3. Kembalikan stok
+                            conn.query(
+                                "UPDATE stok_sparepart SET jumlah = jumlah + ? WHERE id = ?",
+                                [jumlah, sparepartId],
+                                (err) => {
+                                    if (err) {
+                                        return conn.rollback(() => {
+                                            conn.release();
+                                            console.error("Error restore stock:", err);
+                                            res.status(500).json({ error: err.sqlMessage || err.message });
+                                        });
+                                    }
 
-                                // 4. Hapus pemakaian
-                                db.query(
-                                    "DELETE FROM pemakaian_sparepart WHERE id = ?",
-                                    [id],
-                                    (err) => {
-                                        if (err) {
-                                            return db.rollback(() => {
-                                                console.error("Error delete pemakaian:", err);
-                                                res.status(500).json({ error: err.sqlMessage || err.message });
-                                            });
-                                        }
-
-                                        // 5. Commit transaction
-                                        db.commit((err) => {
+                                    // 4. Hapus pemakaian
+                                    conn.query(
+                                        "DELETE FROM pemakaian_sparepart WHERE id = ?",
+                                        [id],
+                                        (err) => {
                                             if (err) {
-                                                return db.rollback(() => {
-                                                    console.error("Error commit delete pemakaian:", err);
+                                                return conn.rollback(() => {
+                                                    conn.release();
+                                                    console.error("Error delete pemakaian:", err);
                                                     res.status(500).json({ error: err.sqlMessage || err.message });
                                                 });
                                             }
 
-                                            res.json({
-                                                message: "Pemakaian berhasil dihapus, stok dikembalikan, dan histori tersimpan"
+                                            // 5. Commit transaction
+                                            conn.commit((err) => {
+                                                if (err) {
+                                                    return conn.rollback(() => {
+                                                        conn.release();
+                                                        console.error("Error commit delete pemakaian:", err);
+                                                        res.status(500).json({ error: err.sqlMessage || err.message });
+                                                    });
+                                                }
+
+                                                conn.release();
+                                                res.json({
+                                                    message: "Pemakaian berhasil dihapus, stok dikembalikan, dan histori tersimpan"
+                                                });
                                             });
-                                        });
-                                    }
-                                );
-                            }
-                        );
-                    }
-                );
-            }
-        );
+                                        }
+                                    );
+                                }
+                            );
+                        }
+                    );
+                }
+            );
+        });
     });
 });
 
@@ -1551,8 +1615,10 @@ router.delete('/api/ban/:id', (req, res) => {
 // Page: pban.html | JS: js/ban/pban.js
 // Fungsi: Mengambil semua data penukaran_ban untuk ditampilkan dan diedit
 router.get("/api/pban/all", (req, res) => {
+    const limitVal = parseInt(req.query.limit) || 5000;
+    const offsetVal = parseInt(req.query.offset) || 0;
     db.query(
-        `SELECT 
+        `SELECT
         pb.id,
         pb.id_kendaraan,
         pb.supir,
@@ -1570,7 +1636,9 @@ router.get("/api/pban/all", (req, res) => {
         pb.id_stok
      FROM penukaran_ban pb
      LEFT JOIN stok_ban sb ON pb.id_stok = sb.id
-     ORDER BY pb.id DESC`,
+     ORDER BY pb.id DESC
+     LIMIT ? OFFSET ?`,
+        [limitVal, offsetVal],
         (err, results) => {
             if (err) {
                 console.error("Error /pban/all GET:", err);
@@ -2987,139 +3055,154 @@ router.post("/api/oli_masuk", (req, res) => {
     const hargaNum = parseFloat(harga) || 0;
     const totalMasuk = jumlahBaruNum + sisaLamaNum;
 
-    db.beginTransaction((err) => {
-        if (err) {
-            console.error("Error beginTransaction oli_masuk:", err);
-            return res.status(500).json({ error: err.sqlMessage || err.message });
-        }
+    db.getConnection((connErr, conn) => {
+        if (connErr) return res.status(500).json({ error: connErr.message });
+        conn.beginTransaction((err) => {
+            if (err) {
+                conn.release();
+                console.error("Error beginTransaction oli_masuk:", err);
+                return res.status(500).json({ error: err.sqlMessage || err.message });
+            }
 
-        // 1. Jika ada oli lama yang digabung, validasi stok tersedia
-        if (id_oli_lama && sisaLamaNum > 0) {
-            db.query(
-                `SELECT total_stok FROM stok_oli WHERE id_oli_masuk = ?`,
-                [id_oli_lama],
-                (errCheck, stokCheck) => {
-                    if (errCheck) {
-                        return db.rollback(() => {
-                            console.error("Error check stok oli lama:", errCheck);
-                            res.status(500).json({ error: errCheck.sqlMessage || errCheck.message });
-                        });
-                    }
-
-                    if (!stokCheck || stokCheck.length === 0) {
-                        return db.rollback(() => {
-                            res.status(404).json({ message: "Stok oli lama tidak ditemukan" });
-                        });
-                    }
-
-                    const stokTersedia = parseFloat(stokCheck[0].total_stok) || 0;
-                    if (sisaLamaNum > stokTersedia) {
-                        return db.rollback(() => {
-                            res.status(400).json({
-                                message: `Stok oli lama tidak mencukupi. Tersedia: ${stokTersedia}L, Diminta: ${sisaLamaNum}L`
+            // 1. Jika ada oli lama yang digabung, validasi stok tersedia
+            if (id_oli_lama && sisaLamaNum > 0) {
+                conn.query(
+                    `SELECT total_stok FROM stok_oli WHERE id_oli_masuk = ? FOR UPDATE`,
+                    [id_oli_lama],
+                    (errCheck, stokCheck) => {
+                        if (errCheck) {
+                            return conn.rollback(() => {
+                                conn.release();
+                                console.error("Error check stok oli lama:", errCheck);
+                                res.status(500).json({ error: errCheck.sqlMessage || errCheck.message });
                             });
-                        });
-                    }
+                        }
 
-                    // Lanjut ke insert oli baru
-                    insertOliBaru();
-                }
-            );
-        } else {
-            // Tidak ada oli lama, langsung insert
-            insertOliBaru();
-        }
+                        if (!stokCheck || stokCheck.length === 0) {
+                            return conn.rollback(() => {
+                                conn.release();
+                                res.status(404).json({ message: "Stok oli lama tidak ditemukan" });
+                            });
+                        }
 
-        function insertOliBaru() {
-            // 2. Insert ke oli_masuk
-            db.query(
-                `INSERT INTO oli_masuk 
-            (tanggal_masuk, nama_oli, no_seri, jumlah_baru, sisa_lama, total_masuk, stok_tersisa, satuan, harga, id_vendor, id_oli_lama, keterangan) 
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                [tanggal_masuk, nama_oli, no_seri, jumlahBaruNum, sisaLamaNum, totalMasuk, totalMasuk, satuan, hargaNum, id_vendor, id_oli_lama, keterangan],
-                (err, result) => {
-                    if (err) {
-                        return db.rollback(() => {
-                            console.error("Error insert oli_masuk:", err);
-                            res.status(500).json({ error: err.sqlMessage || err.message });
-                        });
-                    }
-
-                    const oliMasukId = result.insertId;
-
-                    // 3. Insert ke stok_oli
-                    db.query(
-                        `INSERT INTO stok_oli (id_oli_masuk, total_stok) VALUES (?, ?)`,
-                        [oliMasukId, totalMasuk],
-                        (err2) => {
-                            if (err2) {
-                                return db.rollback(() => {
-                                    console.error("Error insert stok_oli:", err2);
-                                    res.status(500).json({ error: err2.sqlMessage || err2.message });
+                        const stokTersedia = parseFloat(stokCheck[0].total_stok) || 0;
+                        if (sisaLamaNum > stokTersedia) {
+                            return conn.rollback(() => {
+                                conn.release();
+                                res.status(400).json({
+                                    message: `Stok oli lama tidak mencukupi. Tersedia: ${stokTersedia}L, Diminta: ${sisaLamaNum}L`
                                 });
-                            }
+                            });
+                        }
 
-                            // 4. Jika ada oli lama yang digabung
-                            if (id_oli_lama && sisaLamaNum > 0) {
-                                // 4a. Update id_oli_baru di oli_masuk lama
-                                db.query(
-                                    `UPDATE oli_masuk SET id_oli_baru = ?, stok_tersisa = stok_tersisa - ? WHERE id = ?`,
-                                    [oliMasukId, sisaLamaNum, id_oli_lama],
-                                    (err3) => {
-                                        if (err3) {
-                                            return db.rollback(() => {
-                                                console.error("Error update oli_masuk id_oli_baru:", err3);
-                                                res.status(500).json({ error: err3.sqlMessage || err3.message });
-                                            });
-                                        }
+                        // Lanjut ke insert oli baru
+                        insertOliBaru();
+                    }
+                );
+            } else {
+                // Tidak ada oli lama, langsung insert
+                insertOliBaru();
+            }
 
-                                        // 4b. Kurangi stok oli lama sesuai jumlah yang digabung
-                                        db.query(
-                                            `UPDATE stok_oli SET total_stok = total_stok - ? WHERE id_oli_masuk = ?`,
-                                            [sisaLamaNum, id_oli_lama],
-                                            (err4) => {
-                                                if (err4) {
-                                                    return db.rollback(() => {
-                                                        console.error("Error update stok_oli lama:", err4);
-                                                        res.status(500).json({ error: err4.sqlMessage || err4.message });
-                                                    });
-                                                }
+            function insertOliBaru() {
+                // 2. Insert ke oli_masuk
+                conn.query(
+                    `INSERT INTO oli_masuk
+                    (tanggal_masuk, nama_oli, no_seri, jumlah_baru, sisa_lama, total_masuk, stok_tersisa, satuan, harga, id_vendor, id_oli_lama, keterangan)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    [tanggal_masuk, nama_oli, no_seri, jumlahBaruNum, sisaLamaNum, totalMasuk, totalMasuk, satuan, hargaNum, id_vendor, id_oli_lama, keterangan],
+                    (err, result) => {
+                        if (err) {
+                            return conn.rollback(() => {
+                                conn.release();
+                                console.error("Error insert oli_masuk:", err);
+                                res.status(500).json({ error: err.sqlMessage || err.message });
+                            });
+                        }
 
-                                                db.commit((err5) => {
-                                                    if (err5) {
-                                                        return db.rollback(() => {
-                                                            console.error("Error commit oli_masuk:", err5);
-                                                            res.status(500).json({ error: err5.sqlMessage || err5.message });
-                                                        });
-                                                    }
-                                                    res.json({
-                                                        message: `Oli masuk berhasil ditambahkan. ${sisaLamaNum}L dari oli lama telah digabungkan dan stok diperbarui`,
-                                                        id: oliMasukId
-                                                    });
+                        const oliMasukId = result.insertId;
+
+                        // 3. Insert ke stok_oli
+                        conn.query(
+                            `INSERT INTO stok_oli (id_oli_masuk, total_stok) VALUES (?, ?)`,
+                            [oliMasukId, totalMasuk],
+                            (err2) => {
+                                if (err2) {
+                                    return conn.rollback(() => {
+                                        conn.release();
+                                        console.error("Error insert stok_oli:", err2);
+                                        res.status(500).json({ error: err2.sqlMessage || err2.message });
+                                    });
+                                }
+
+                                // 4. Jika ada oli lama yang digabung
+                                if (id_oli_lama && sisaLamaNum > 0) {
+                                    // 4a. Update id_oli_baru di oli_masuk lama
+                                    conn.query(
+                                        `UPDATE oli_masuk SET id_oli_baru = ?, stok_tersisa = stok_tersisa - ? WHERE id = ?`,
+                                        [oliMasukId, sisaLamaNum, id_oli_lama],
+                                        (err3) => {
+                                            if (err3) {
+                                                return conn.rollback(() => {
+                                                    conn.release();
+                                                    console.error("Error update oli_masuk id_oli_baru:", err3);
+                                                    res.status(500).json({ error: err3.sqlMessage || err3.message });
                                                 });
                                             }
-                                        );
-                                    }
-                                );
-                            } else {
-                                db.commit((err5) => {
-                                    if (err5) {
-                                        return db.rollback(() => {
-                                            console.error("Error commit oli_masuk:", err5);
-                                            res.status(500).json({ error: err5.sqlMessage || err5.message });
+
+                                            // 4b. Kurangi stok oli lama sesuai jumlah yang digabung
+                                            conn.query(
+                                                `UPDATE stok_oli SET total_stok = total_stok - ? WHERE id_oli_masuk = ?`,
+                                                [sisaLamaNum, id_oli_lama],
+                                                (err4) => {
+                                                    if (err4) {
+                                                        return conn.rollback(() => {
+                                                            conn.release();
+                                                            console.error("Error update stok_oli lama:", err4);
+                                                            res.status(500).json({ error: err4.sqlMessage || err4.message });
+                                                        });
+                                                    }
+
+                                                    conn.commit((err5) => {
+                                                        if (err5) {
+                                                            return conn.rollback(() => {
+                                                                conn.release();
+                                                                console.error("Error commit oli_masuk:", err5);
+                                                                res.status(500).json({ error: err5.sqlMessage || err5.message });
+                                                            });
+                                                        }
+                                                        conn.release();
+                                                        res.json({
+                                                            message: `Oli masuk berhasil ditambahkan. ${sisaLamaNum}L dari oli lama telah digabungkan dan stok diperbarui`,
+                                                            id: oliMasukId
+                                                        });
+                                                    });
+                                                }
+                                            );
+                                        }
+                                    );
+                                } else {
+                                    conn.commit((err5) => {
+                                        if (err5) {
+                                            return conn.rollback(() => {
+                                                conn.release();
+                                                console.error("Error commit oli_masuk:", err5);
+                                                res.status(500).json({ error: err5.sqlMessage || err5.message });
+                                            });
+                                        }
+                                        conn.release();
+                                        res.json({
+                                            message: "Oli masuk berhasil ditambahkan",
+                                            id: oliMasukId
                                         });
-                                    }
-                                    res.json({
-                                        message: "Oli masuk berhasil ditambahkan",
-                                        id: oliMasukId
                                     });
-                                });
                             }
                         }
                     );
                 }
             );
-        }
+            }
+        });
     });
 });
 
@@ -3146,75 +3229,85 @@ router.put("/api/oli_masuk/:id", (req, res) => {
     const hargaNum = parseFloat(harga) || 0;
     const totalMasuk = jumlahBaruNum + sisaLamaNum;
 
-    db.beginTransaction((err) => {
-        if (err) {
-            console.error("Error beginTransaction update oli_masuk:", err);
-            return res.status(500).json({ error: err.sqlMessage || err.message });
-        }
+    db.getConnection((connErr, conn) => {
+        if (connErr) return res.status(500).json({ error: connErr.message });
+        conn.beginTransaction((err) => {
+            if (err) {
+                conn.release();
+                console.error("Error beginTransaction update oli_masuk:", err);
+                return res.status(500).json({ error: err.sqlMessage || err.message });
+            }
 
-        // 1. Update oli_masuk
-        db.query(
-            `UPDATE oli_masuk 
-      SET tanggal_masuk=?, nama_oli=?, no_seri=?, jumlah_baru=?, sisa_lama=?, 
-          total_masuk=?, stok_tersisa=?, satuan=?, harga=?, id_vendor=?, id_oli_lama=?, keterangan=? 
-      WHERE id=?`,
-            [tanggal_masuk, nama_oli, no_seri, jumlahBaruNum, sisaLamaNum,
-                totalMasuk, totalMasuk, satuan, hargaNum, id_vendor, id_oli_lama, keterangan, id],
-            (err, result) => {
-                if (err) {
-                    return db.rollback(() => {
-                        console.error("Error update oli_masuk:", err);
-                        res.status(500).json({ error: err.sqlMessage || err.message });
-                    });
-                }
-                if (result.affectedRows === 0) {
-                    return db.rollback(() => {
-                        res.status(404).json({ message: "Oli masuk tidak ditemukan" });
-                    });
-                }
+            // 1. Update oli_masuk
+            conn.query(
+                `UPDATE oli_masuk
+                SET tanggal_masuk=?, nama_oli=?, no_seri=?, jumlah_baru=?, sisa_lama=?,
+                    total_masuk=?, stok_tersisa=?, satuan=?, harga=?, id_vendor=?, id_oli_lama=?, keterangan=?
+                WHERE id=?`,
+                [tanggal_masuk, nama_oli, no_seri, jumlahBaruNum, sisaLamaNum,
+                    totalMasuk, totalMasuk, satuan, hargaNum, id_vendor, id_oli_lama, keterangan, id],
+                (err, result) => {
+                    if (err) {
+                        return conn.rollback(() => {
+                            conn.release();
+                            console.error("Error update oli_masuk:", err);
+                            res.status(500).json({ error: err.sqlMessage || err.message });
+                        });
+                    }
+                    if (result.affectedRows === 0) {
+                        return conn.rollback(() => {
+                            conn.release();
+                            res.status(404).json({ message: "Oli masuk tidak ditemukan" });
+                        });
+                    }
 
-                // 2. Hitung total yang sudah dipakai agar stok tidak salah setelah edit
-                db.query(
-                    `SELECT COALESCE(SUM(jumlah_pakai), 0) AS totalDipakai FROM pemakaian_oli WHERE id_oli_masuk = ?`,
-                    [id],
-                    (err2, dipakaiResult) => {
-                        if (err2) {
-                            return db.rollback(() => {
-                                console.error("Error query pemakaian_oli:", err2);
-                                res.status(500).json({ error: err2.sqlMessage || err2.message });
-                            });
-                        }
-
-                        const totalDipakai = parseFloat(dipakaiResult[0].totalDipakai) || 0;
-                        const stokBaru = Math.max(0, totalMasuk - totalDipakai);
-
-                        // 3. Update stok_oli dengan memperhitungkan pemakaian yang sudah ada
-                        db.query(
-                            `UPDATE stok_oli SET total_stok = ? WHERE id_oli_masuk = ?`,
-                            [stokBaru, id],
-                            (err3) => {
-                                if (err3) {
-                                    return db.rollback(() => {
-                                        console.error("Error update stok_oli:", err3);
-                                        res.status(500).json({ error: err3.sqlMessage || err3.message });
-                                    });
-                                }
-
-                                db.commit((err4) => {
-                                    if (err4) {
-                                        return db.rollback(() => {
-                                            console.error("Error commit update oli_masuk:", err4);
-                                            res.status(500).json({ error: err4.sqlMessage || err4.message });
-                                        });
-                                    }
-                                    res.json({ message: "Oli masuk berhasil diperbarui" });
+                    // 2. Hitung total yang sudah dipakai agar stok tidak salah setelah edit
+                    conn.query(
+                        `SELECT COALESCE(SUM(jumlah_pakai), 0) AS totalDipakai FROM pemakaian_oli WHERE id_oli_masuk = ?`,
+                        [id],
+                        (err2, dipakaiResult) => {
+                            if (err2) {
+                                return conn.rollback(() => {
+                                    conn.release();
+                                    console.error("Error query pemakaian_oli:", err2);
+                                    res.status(500).json({ error: err2.sqlMessage || err2.message });
                                 });
                             }
-                        );
-                    }
-                );
-            }
-        );
+
+                            const totalDipakai = parseFloat(dipakaiResult[0].totalDipakai) || 0;
+                            const stokBaru = Math.max(0, totalMasuk - totalDipakai);
+
+                            // 3. Update stok_oli dengan memperhitungkan pemakaian yang sudah ada
+                            conn.query(
+                                `UPDATE stok_oli SET total_stok = ? WHERE id_oli_masuk = ?`,
+                                [stokBaru, id],
+                                (err3) => {
+                                    if (err3) {
+                                        return conn.rollback(() => {
+                                            conn.release();
+                                            console.error("Error update stok_oli:", err3);
+                                            res.status(500).json({ error: err3.sqlMessage || err3.message });
+                                        });
+                                    }
+
+                                    conn.commit((err4) => {
+                                        if (err4) {
+                                            return conn.rollback(() => {
+                                                conn.release();
+                                                console.error("Error commit update oli_masuk:", err4);
+                                                res.status(500).json({ error: err4.sqlMessage || err4.message });
+                                            });
+                                        }
+                                        conn.release();
+                                        res.json({ message: "Oli masuk berhasil diperbarui" });
+                                    });
+                                }
+                            );
+                        }
+                    );
+                }
+            );
+        });
     });
 });
 
@@ -3224,61 +3317,71 @@ router.put("/api/oli_masuk/:id", (req, res) => {
 router.delete("/api/oli_masuk/:id", (req, res) => {
     const { id } = req.params;
 
-    db.beginTransaction((err) => {
-        if (err) {
-            console.error("Error beginTransaction delete oli_masuk:", err);
-            return res.status(500).json({ error: err.sqlMessage || err.message });
-        }
+    db.getConnection((connErr, conn) => {
+        if (connErr) return res.status(500).json({ error: connErr.message });
+        conn.beginTransaction((err) => {
+            if (err) {
+                conn.release();
+                console.error("Error beginTransaction delete oli_masuk:", err);
+                return res.status(500).json({ error: err.sqlMessage || err.message });
+            }
 
-        // 1. Cek apakah oli sudah dipakai
-        db.query(
-            "SELECT COUNT(*) as total FROM pemakaian_oli WHERE id_oli_masuk=?",
-            [id],
-            (err, result) => {
-                if (err) {
-                    return db.rollback(() => {
-                        console.error("Error check pemakaian oli:", err);
-                        res.status(500).json({ error: err.sqlMessage || err.message });
-                    });
-                }
-
-                if (result[0].total > 0) {
-                    return db.rollback(() => {
-                        res.status(400).json({ message: "Oli sudah dipakai, tidak bisa dihapus" });
-                    });
-                }
-
-                // 2. Delete stok_oli
-                db.query("DELETE FROM stok_oli WHERE id_oli_masuk=?", [id], (err2) => {
-                    if (err2) {
-                        return db.rollback(() => {
-                            console.error("Error delete stok_oli:", err2);
-                            res.status(500).json({ error: err2.sqlMessage || err2.message });
+            // 1. Cek apakah oli sudah dipakai
+            conn.query(
+                "SELECT COUNT(*) as total FROM pemakaian_oli WHERE id_oli_masuk=?",
+                [id],
+                (err, result) => {
+                    if (err) {
+                        return conn.rollback(() => {
+                            conn.release();
+                            console.error("Error check pemakaian oli:", err);
+                            res.status(500).json({ error: err.sqlMessage || err.message });
                         });
                     }
 
-                    // 3. Delete oli_masuk
-                    db.query("DELETE FROM oli_masuk WHERE id=?", [id], (err3) => {
-                        if (err3) {
-                            return db.rollback(() => {
-                                console.error("Error delete oli_masuk:", err3);
-                                res.status(500).json({ error: err3.sqlMessage || err3.message });
+                    if (result[0].total > 0) {
+                        return conn.rollback(() => {
+                            conn.release();
+                            res.status(400).json({ message: "Oli sudah dipakai, tidak bisa dihapus" });
+                        });
+                    }
+
+                    // 2. Delete stok_oli
+                    conn.query("DELETE FROM stok_oli WHERE id_oli_masuk=?", [id], (err2) => {
+                        if (err2) {
+                            return conn.rollback(() => {
+                                conn.release();
+                                console.error("Error delete stok_oli:", err2);
+                                res.status(500).json({ error: err2.sqlMessage || err2.message });
                             });
                         }
 
-                        db.commit((err4) => {
-                            if (err4) {
-                                return db.rollback(() => {
-                                    console.error("Error commit delete oli_masuk:", err4);
-                                    res.status(500).json({ error: err4.sqlMessage || err4.message });
+                        // 3. Delete oli_masuk
+                        conn.query("DELETE FROM oli_masuk WHERE id=?", [id], (err3) => {
+                            if (err3) {
+                                return conn.rollback(() => {
+                                    conn.release();
+                                    console.error("Error delete oli_masuk:", err3);
+                                    res.status(500).json({ error: err3.sqlMessage || err3.message });
                                 });
                             }
-                            res.json({ message: "Oli masuk berhasil dihapus" });
+
+                            conn.commit((err4) => {
+                                if (err4) {
+                                    return conn.rollback(() => {
+                                        conn.release();
+                                        console.error("Error commit delete oli_masuk:", err4);
+                                        res.status(500).json({ error: err4.sqlMessage || err4.message });
+                                    });
+                                }
+                                conn.release();
+                                res.json({ message: "Oli masuk berhasil dihapus" });
+                            });
                         });
                     });
-                });
-            }
-        );
+                }
+            );
+        });
     });
 });
 
@@ -3323,8 +3426,10 @@ router.get("/api/stok_oli", (req, res) => {
 // Page: rekapoli.html | JS: js/literan/rekapoli.js
 // Fungsi: Mengambil data pemakaian oli untuk laporan
 router.get("/api/pemakaian_oli", (req, res) => {
+    const limitVal = parseInt(req.query.limit) || 5000;
+    const offsetVal = parseInt(req.query.offset) || 0;
     db.query(
-        `SELECT 
+        `SELECT
       po.*,
       om.nama_oli,
       om.no_seri,
@@ -3333,7 +3438,9 @@ router.get("/api/pemakaian_oli", (req, res) => {
      FROM pemakaian_oli po
      JOIN oli_masuk om ON po.id_oli_masuk = om.id
      JOIN kendaraan k ON po.id_kendaraan = k.id
-     ORDER BY po.tanggal_pakai DESC, po.id DESC`,
+     ORDER BY po.tanggal_pakai DESC, po.id DESC
+     LIMIT ? OFFSET ?`,
+        [limitVal, offsetVal],
         (err, results) => {
             if (err) {
                 console.error("Error /pemakaian_oli GET:", err);
@@ -3363,98 +3470,110 @@ router.post("/api/pemakaian_oli", (req, res) => {
         });
     }
 
-    db.beginTransaction((err) => {
-        if (err) {
-            console.error("Error beginTransaction pemakaian_oli:", err);
-            return res.status(500).json({ error: err.sqlMessage || err.message });
-        }
+    db.getConnection((connErr, conn) => {
+        if (connErr) return res.status(500).json({ error: connErr.message });
+        conn.beginTransaction((err) => {
+            if (err) {
+                conn.release();
+                console.error("Error beginTransaction pemakaian_oli:", err);
+                return res.status(500).json({ error: err.sqlMessage || err.message });
+            }
 
-        // 1. Cek stok tersedia
-        db.query(
-            "SELECT total_stok FROM stok_oli WHERE id_oli_masuk = ?",
-            [id_oli_masuk],
-            (err, stokResult) => {
-                if (err) {
-                    return db.rollback(() => {
-                        console.error("Error check stok:", err);
-                        res.status(500).json({ error: err.sqlMessage || err.message });
-                    });
-                }
-                if (!stokResult || stokResult.length === 0) {
-                    return db.rollback(() => {
-                        res.status(404).json({ message: "Stok oli tidak ditemukan" });
-                    });
-                }
-
-                const stokTersedia = parseFloat(stokResult[0].total_stok) || 0;
-                if (jumlahPakaiNum > stokTersedia) {
-                    return db.rollback(() => {
-                        res.status(400).json({
-                            message: `Stok tidak mencukupi. Tersedia: ${stokTersedia}L, Diminta: ${jumlahPakaiNum}L`
+            // 1. Cek stok tersedia
+            conn.query(
+                "SELECT total_stok FROM stok_oli WHERE id_oli_masuk = ? FOR UPDATE",
+                [id_oli_masuk],
+                (err, stokResult) => {
+                    if (err) {
+                        return conn.rollback(() => {
+                            conn.release();
+                            console.error("Error check stok:", err);
+                            res.status(500).json({ error: err.sqlMessage || err.message });
                         });
-                    });
-                }
+                    }
+                    if (!stokResult || stokResult.length === 0) {
+                        return conn.rollback(() => {
+                            conn.release();
+                            res.status(404).json({ message: "Stok oli tidak ditemukan" });
+                        });
+                    }
 
-                // 2. Insert pemakaian_oli
-                db.query(
-                    `INSERT INTO pemakaian_oli
-          (tanggal_pakai, id_oli_masuk, id_kendaraan, jumlah_pakai, keterangan)
-          VALUES (?, ?, ?, ?, ?)`,
-                    [tanggal_pakai, id_oli_masuk, id_kendaraan, jumlahPakaiNum, keterangan || null],
-                    (err, result) => {
-                        if (err) {
-                            return db.rollback(() => {
-                                console.error("Error insert pemakaian_oli:", err);
-                                res.status(500).json({ error: err.sqlMessage || err.message });
+                    const stokTersedia = parseFloat(stokResult[0].total_stok) || 0;
+                    if (jumlahPakaiNum > stokTersedia) {
+                        return conn.rollback(() => {
+                            conn.release();
+                            res.status(400).json({
+                                message: `Stok tidak mencukupi. Tersedia: ${stokTersedia}L, Diminta: ${jumlahPakaiNum}L`
                             });
-                        }
+                        });
+                    }
 
-                        // 3. Update stok_oli (kurangi stok)
-                        const stokBaru = stokTersedia - jumlahPakaiNum;
-                        db.query(
-                            "UPDATE stok_oli SET total_stok = ? WHERE id_oli_masuk = ?",
-                            [stokBaru, id_oli_masuk],
-                            (err2) => {
-                                if (err2) {
-                                    return db.rollback(() => {
-                                        console.error("Error update stok_oli:", err2);
-                                        res.status(500).json({ error: err2.sqlMessage || err2.message });
-                                    });
-                                }
+                    // 2. Insert pemakaian_oli
+                    conn.query(
+                        `INSERT INTO pemakaian_oli
+                        (tanggal_pakai, id_oli_masuk, id_kendaraan, jumlah_pakai, keterangan)
+                        VALUES (?, ?, ?, ?, ?)`,
+                        [tanggal_pakai, id_oli_masuk, id_kendaraan, jumlahPakaiNum, keterangan || null],
+                        (err, result) => {
+                            if (err) {
+                                return conn.rollback(() => {
+                                    conn.release();
+                                    console.error("Error insert pemakaian_oli:", err);
+                                    res.status(500).json({ error: err.sqlMessage || err.message });
+                                });
+                            }
 
-                                // 4. Update stok_tersisa di oli_masuk
-                                db.query(
-                                    "UPDATE oli_masuk SET stok_tersisa = stok_tersisa - ? WHERE id = ?",
-                                    [jumlahPakaiNum, id_oli_masuk],
-                                    (err3) => {
-                                        if (err3) {
-                                            return db.rollback(() => {
-                                                console.error("Error update oli_masuk stok_tersisa:", err3);
-                                                res.status(500).json({ error: err3.sqlMessage || err3.message });
-                                            });
-                                        }
-
-                                        db.commit((err4) => {
-                                            if (err4) {
-                                                return db.rollback(() => {
-                                                    console.error("Error commit pemakaian_oli:", err4);
-                                                    res.status(500).json({ error: err4.sqlMessage || err4.message });
-                                                });
-                                            }
-                                            res.json({
-                                                message: "Pemakaian oli berhasil dicatat",
-                                                id: result.insertId,
-                                                stok_tersisa: stokBaru
-                                            });
+                            // 3. Update stok_oli (kurangi stok)
+                            const stokBaru = stokTersedia - jumlahPakaiNum;
+                            conn.query(
+                                "UPDATE stok_oli SET total_stok = ? WHERE id_oli_masuk = ?",
+                                [stokBaru, id_oli_masuk],
+                                (err2) => {
+                                    if (err2) {
+                                        return conn.rollback(() => {
+                                            conn.release();
+                                            console.error("Error update stok_oli:", err2);
+                                            res.status(500).json({ error: err2.sqlMessage || err2.message });
                                         });
                                     }
-                                );
-                            }
-                        );
-                    }
-                );
-            }
-        );
+
+                                    // 4. Update stok_tersisa di oli_masuk
+                                    conn.query(
+                                        "UPDATE oli_masuk SET stok_tersisa = stok_tersisa - ? WHERE id = ?",
+                                        [jumlahPakaiNum, id_oli_masuk],
+                                        (err3) => {
+                                            if (err3) {
+                                                return conn.rollback(() => {
+                                                    conn.release();
+                                                    console.error("Error update oli_masuk stok_tersisa:", err3);
+                                                    res.status(500).json({ error: err3.sqlMessage || err3.message });
+                                                });
+                                            }
+
+                                            conn.commit((err4) => {
+                                                if (err4) {
+                                                    return conn.rollback(() => {
+                                                        conn.release();
+                                                        console.error("Error commit pemakaian_oli:", err4);
+                                                        res.status(500).json({ error: err4.sqlMessage || err4.message });
+                                                    });
+                                                }
+                                                conn.release();
+                                                res.json({
+                                                    message: "Pemakaian oli berhasil dicatat",
+                                                    id: result.insertId,
+                                                    stok_tersisa: stokBaru
+                                                });
+                                            });
+                                        }
+                                    );
+                                }
+                            );
+                        }
+                    );
+                }
+            );
+        });
     });
 });
 
