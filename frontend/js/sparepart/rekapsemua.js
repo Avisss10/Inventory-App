@@ -1,20 +1,24 @@
 const API_BASE_URL = '/api';
     
     const CONFIG = {
-      columnCounts: { stok: 8, kendaraan: 11, vendor: 9, pemakaian_vendor: 11, sisa_stok: 11 },
+      columnCounts: { stok: 8, kendaraan: 11, vendor: 9, pemakaian_vendor: 11, sisa_stok: 11, pemakaian_per_vendor: 10, sisa_stok_per_vendor: 10 },
       headers: {
         stok: ['No', 'No Seri', 'Nama Barang', 'Jumlah', 'Harga Satuan', 'Total', 'Vendor', 'Tanggal'],
         kendaraan: ['No', 'Tanggal', 'Kendaraan', 'Nama Barang', 'Jumlah', 'Satuan', 'Harga Satuan', 'Total', 'Vendor', 'Penanggung Jawab', 'No Seri / Keterangan'],
         vendor: ['No', 'Tanggal', 'Vendor', 'No Seri', 'Nama Barang', 'Jumlah', 'Satuan', 'Harga Satuan', 'Total'],
         pemakaian_vendor: ['No', 'Tanggal Masuk', 'No Seri', 'Nama Barang', 'Jumlah', 'Satuan', 'Harga Satuan', 'Total', 'Vendor', 'Kendaraan', 'Tanggal Pemakaian'],
-        sisa_stok: ['No', 'Tgl Masuk', 'No Seri', 'Nama Barang', 'Jenis', 'Satuan', 'Harga Satuan', 'Jml Masuk', 'Jml Dipakai', 'Sisa Stok', 'Vendor']
+        sisa_stok: ['No', 'Tgl Masuk', 'No Seri', 'Nama Barang', 'Jenis', 'Satuan', 'Harga Satuan', 'Jml Masuk', 'Jml Dipakai', 'Sisa Stok', 'Vendor'],
+        pemakaian_per_vendor: ['No', 'Tgl Masuk', 'No Seri', 'Nama Barang', 'Jumlah', 'Satuan', 'Harga Satuan', 'Total', 'Kendaraan', 'Tgl Pemakaian'],
+        sisa_stok_per_vendor: ['No', 'Tgl Masuk', 'No Seri', 'Nama Barang', 'Jenis', 'Satuan', 'Harga Satuan', 'Jml Masuk', 'Jml Dipakai', 'Sisa Stok']
       },
       titles: {
         stok: 'REKAP STOK GUDANG',
         kendaraan: 'REKAP PEMAKAIAN KENDARAAN',
         vendor: 'REKAP TRANSAKSI VENDOR',
         pemakaian_vendor: 'REKAP PEMAKAIAN PER BON',
-        sisa_stok: 'REKAP SISA STOK'
+        sisa_stok: 'REKAP SISA STOK',
+        pemakaian_per_vendor: 'REKAP PEMAKAIAN (VENDOR)',
+        sisa_stok_per_vendor: 'REKAP SISA STOK (VENDOR)'
       },
       filterLabels: {
         semua: 'Semua Data',
@@ -134,7 +138,7 @@ const API_BASE_URL = '/api';
     const ui = {
       toggleFilters(tipe) {
         // Hide all filters first
-        $$('.filter-stok, .filter-kendaraan, .filter-vendor, .filter-pemakaian_vendor, .filter-sisa_stok').forEach(el => el.classList.add('filter-hidden'));
+        $$('.filter-stok, .filter-kendaraan, .filter-vendor, .filter-pemakaian_vendor, .filter-sisa_stok, .filter-pemakaian_per_vendor, .filter-sisa_stok_per_vendor').forEach(el => el.classList.add('filter-hidden'));
         // Show filters for the selected type
         $$(`.filter-${tipe}`).forEach(el => el.classList.remove('filter-hidden'));
       },
@@ -156,7 +160,7 @@ const API_BASE_URL = '/api';
       },
 
       showLoading(tipe) {
-        if (tipe === 'vendor') {
+        if (tipe === 'vendor' || tipe === 'pemakaian_per_vendor' || tipe === 'sisa_stok_per_vendor') {
           document.getElementById('tableContainer').style.display = 'none';
           const acc = $('vendorAccordion');
           acc.style.display = 'block';
@@ -170,7 +174,7 @@ const API_BASE_URL = '/api';
       },
 
       showEmpty(tipe, msg = 'Tidak ada data yang ditemukan') {
-        if (tipe === 'vendor') {
+        if (tipe === 'vendor' || tipe === 'pemakaian_per_vendor' || tipe === 'sisa_stok_per_vendor') {
           document.getElementById('tableContainer').style.display = 'none';
           const acc = $('vendorAccordion');
           acc.style.display = 'block';
@@ -198,14 +202,14 @@ const API_BASE_URL = '/api';
         const vendorNama = $('vendorFilter').value;
         const satuanFilter = $('satuanFilter').value;
 
-        if ((tipe === 'stok' || tipe === 'pemakaian_vendor') && searchTerm) {
+        if ((tipe === 'stok' || tipe === 'pemakaian_vendor' || tipe === 'pemakaian_per_vendor') && searchTerm) {
           filtered = filtered.filter(item =>
             (item.nama_sparepart || item.nama_barang || '').toLowerCase().includes(searchTerm)
           );
         }
 
-        // Untuk sisa_stok, filter nama barang dari field nama_barang
-        if (tipe === 'sisa_stok' && searchTerm) {
+        // Untuk sisa_stok / sisa_stok_per_vendor, filter nama barang dari field nama_barang
+        if ((tipe === 'sisa_stok' || tipe === 'sisa_stok_per_vendor') && searchTerm) {
           filtered = filtered.filter(item =>
             (item.nama_barang || '').toLowerCase().includes(searchTerm)
           );
@@ -216,7 +220,7 @@ const API_BASE_URL = '/api';
         }
 
         // Filter sisa = 0 menggunakan stokFilter
-        if (tipe === 'sisa_stok' && stokFilter === 'habis') {
+        if ((tipe === 'sisa_stok' || tipe === 'sisa_stok_per_vendor') && stokFilter === 'habis') {
           filtered = filtered.filter(item => {
             const sisa = (parseFloat(item.jumlah_masuk) || 0) - (parseFloat(item.jumlah_pakai) || 0);
             return sisa <= 0;
@@ -433,6 +437,136 @@ const API_BASE_URL = '/api';
               filterType: `${masukType}|${pemakaianType}`,
               tipe: 'sisa_stok'
             };
+
+          } else if (tipe === 'pemakaian_per_vendor') {
+            // ── PEMAKAIAN PER VENDOR (accordion) ──────────────────────
+            const masukType     = $('filterMasukType').value;
+            const pemakaianType = $('filterPemakaianType').value;
+
+            const masukRange     = utils.getDateRange(masukType,     $('filterMasukStart').value,    $('filterMasukEnd').value);
+            const pemakaianRange = utils.getDateRange(pemakaianType, $('filterPemakaianStart').value, $('filterPemakaianEnd').value);
+
+            if (masukType === 'manual' && (!masukRange.start || !masukRange.end)) {
+              alert('Harap isi tanggal untuk filter Tanggal Masuk!');
+              return;
+            }
+            if (pemakaianType === 'manual' && (!pemakaianRange.start || !pemakaianRange.end)) {
+              alert('Harap isi tanggal untuk filter Tanggal Pemakaian!');
+              return;
+            }
+
+            const vendorNama  = $('vendorFilter').value.trim();
+            const vendorId    = vendorNama ? state.vendorNameToId[vendorNama] : '';
+            const barang      = $('barangFilter').value.trim();
+            const kendaraanId = state.kendaraanLabelToId[$('kendaraanFilter').value] || '';
+            const noSeri      = $('noSeriFilter').value.trim();
+
+            const masukParams     = (masukType && masukType !== 'semua' && masukRange.start && masukRange.end) ? `&masuk_start=${masukRange.start}&masuk_end=${masukRange.end}` : '';
+            const pemakaianParams = (pemakaianType && pemakaianType !== 'semua' && pemakaianRange.start && pemakaianRange.end) ? `&pemakaian_start=${pemakaianRange.start}&pemakaian_end=${pemakaianRange.end}` : '';
+            const noSeriParam     = noSeri     ? `&no_seri=${encodeURIComponent(noSeri)}`  : '';
+            const vendorParam     = vendorId   ? `&vendor=${vendorId}`                     : '';
+            const kendaraanParam  = kendaraanId ? `&kendaraan=${kendaraanId}`              : '';
+            const barangParam     = barang     ? `&barang=${encodeURIComponent(barang)}`   : '';
+            const namaOliParam    = barang     ? `&nama_oli=${encodeURIComponent(barang)}` : '';
+            const merkBanParam    = barang     ? `&merkBan=${encodeURIComponent(barang)}`  : '';
+
+            const sparepartUrl = `/pemakaian_vendor?${vendorParam}${barangParam}${kendaraanParam}${masukParams}${pemakaianParams}${noSeriParam}`;
+            const oliUrl       = `/rekap/pemakaian_per_bon?${vendorParam}${namaOliParam}${kendaraanParam}${masukParams}${pemakaianParams}${noSeriParam}`;
+            const banUrl       = `/pemakaian_ban_per_masuk?${vendorParam}${merkBanParam}${kendaraanParam}${masukParams}${pemakaianParams}`;
+
+            const [sparepartData, oliData, banData] = await Promise.all([
+              api.fetch(sparepartUrl),
+              api.fetch(oliUrl),
+              api.fetch(banUrl)
+            ]);
+
+            const normalized = [
+              ...sparepartData.map(row => ({ ...row, source: 'sparepart' })),
+              ...oliData.map(row => ({
+                ...row,
+                nama_sparepart: row.nama_oli || row.nama_sparepart || '',
+                jumlah: row.jumlah_pakai || row.jumlah || 0,
+                tanggal_masuk: row.tanggal_masuk || '',
+                tanggal_pemakaian: row.tanggal_pemakaian || row.tanggal_pakai || row.tanggal || '',
+                satuan: row.satuan || 'liter',
+                source: 'oli'
+              })),
+              ...banData.map(row => ({
+                ...row,
+                nama_sparepart: row.merk_ban ? `Ban ${row.merk_ban}` : row.nama_sparepart || '',
+                jumlah: row.jumlah || 1,
+                satuan: row.satuan || 'pcs',
+                tanggal_masuk: row.tgl_ban_masuk || row.tanggal_masuk || '',
+                tanggal_pemakaian: row.tanggal_pemakaian || '',
+                source: 'ban'
+              }))
+            ];
+
+            state.currentFilter = {
+              vendor: vendorId, vendorNama, barang,
+              kendaraan: kendaraanId, kendaraanLabel: $('kendaraanFilter').value,
+              noSeri,
+              masukStart: masukRange.start || '', masukEnd: masukRange.end || '',
+              masukFilterType: masukType,
+              pemakaianStart: pemakaianRange.start || '', pemakaianEnd: pemakaianRange.end || '',
+              pemakaianFilterType: pemakaianType,
+              filterType: `${masukType}|${pemakaianType}`,
+              tipe: 'pemakaian_per_vendor'
+            };
+
+            state.allData = normalized;
+            this.renderTable(this.applyFilters(normalized));
+            $('lowStockAlert').classList.add('filter-hidden');
+            return;
+
+          } else if (tipe === 'sisa_stok_per_vendor') {
+            // ── SISA STOK PER VENDOR (accordion) ──────────────────────
+            const masukType     = $('filterMasukType').value;
+            const pemakaianType = $('filterPemakaianType').value;
+
+            const masukRange     = utils.getDateRange(masukType,     $('filterMasukStart').value,    $('filterMasukEnd').value);
+            const pemakaianRange = utils.getDateRange(pemakaianType, $('filterPemakaianStart').value, $('filterPemakaianEnd').value);
+
+            if (masukType === 'manual' && (!masukRange.start || !masukRange.end)) {
+              alert('Harap isi tanggal untuk filter Tanggal Masuk!');
+              return;
+            }
+            if (pemakaianType === 'manual' && (!pemakaianRange.start || !pemakaianRange.end)) {
+              alert('Harap isi tanggal untuk filter Tanggal Pemakaian!');
+              return;
+            }
+
+            const vendorNama  = $('vendorFilter').value.trim();
+            const vendorId    = vendorNama ? state.vendorNameToId[vendorNama] : '';
+            const barang      = $('barangFilter').value.trim();
+            const kendaraanId = state.kendaraanLabelToId[$('kendaraanFilter').value] || '';
+            const noSeri      = $('noSeriFilter').value.trim();
+            const satuan      = $('satuanFilter').value;
+
+            const masukParams     = (masukType !== 'semua' && masukRange.start && masukRange.end)
+              ? `&masuk_start=${masukRange.start}&masuk_end=${masukRange.end}` : '';
+            const pemakaianParams = (pemakaianType !== 'semua' && pemakaianRange.start && pemakaianRange.end)
+              ? `&pemakaian_start=${pemakaianRange.start}&pemakaian_end=${pemakaianRange.end}` : '';
+            const vendorParam  = vendorId    ? `&vendor=${vendorId}`                    : '';
+            const kendaraanParam = kendaraanId ? `&kendaraan=${kendaraanId}`            : '';
+            const barangParam  = barang      ? `&barang=${encodeURIComponent(barang)}`  : '';
+            const noSeriParam  = noSeri      ? `&no_seri=${encodeURIComponent(noSeri)}` : '';
+            const satuanParam  = satuan && satuan !== 'semua' ? `&satuan=${satuan}`     : '';
+
+            url = `/rekap/sisa_stok?${vendorParam}${barangParam}${kendaraanParam}${masukParams}${pemakaianParams}${noSeriParam}${satuanParam}`;
+
+            state.currentFilter = {
+              vendor: vendorId, vendorNama, barang,
+              kendaraan: kendaraanId, kendaraanLabel: $('kendaraanFilter').value,
+              noSeri,
+              satuanFilter: satuan,
+              masukStart:  masukRange.start  || '', masukEnd:  masukRange.end  || '',
+              masukFilterType: masukType,
+              pemakaianStart: pemakaianRange.start || '', pemakaianEnd: pemakaianRange.end || '',
+              pemakaianFilterType: pemakaianType,
+              filterType: `${masukType}|${pemakaianType}`,
+              tipe: 'sisa_stok_per_vendor'
+            };
           }
 
           const data = await api.fetch(url);
@@ -456,6 +590,14 @@ const API_BASE_URL = '/api';
 
         if (tipe === 'vendor') {
           this.renderVendorAccordion(data);
+          return;
+        }
+        if (tipe === 'pemakaian_per_vendor') {
+          this.renderPemakaianVendorAccordion(data);
+          return;
+        }
+        if (tipe === 'sisa_stok_per_vendor') {
+          this.renderSisaStokVendorAccordion(data);
           return;
         }
 
@@ -594,8 +736,8 @@ const API_BASE_URL = '/api';
       updateSummary() {
         const tipe = $('tipeLaporan').value;
 
-        // ── Summary khusus Sisa Stok ──────────────────────────────────
-        if (tipe === 'sisa_stok') {
+        // ── Summary khusus Sisa Stok dan Sisa Stok Per Vendor ────────
+        if (tipe === 'sisa_stok' || tipe === 'sisa_stok_per_vendor') {
           let totalMasuk = 0, totalPakai = 0, totalSisa = 0, nilaiSisa = 0;
           const satuanMap = {};
 
@@ -764,6 +906,193 @@ const API_BASE_URL = '/api';
         });
 
         this.updateSummary();
+      },
+
+      renderPemakaianVendorAccordion(data) {
+        document.getElementById('tableContainer').style.display = 'none';
+        const container = $('vendorAccordion');
+        container.style.display = 'block';
+        container.innerHTML = '';
+
+        if (!data.length) {
+          container.innerHTML = '<div style="text-align:center;padding:40px;color:#6c757d;font-size:14px;">Tidak ada data pemakaian vendor ditemukan</div>';
+          this.updateSummary();
+          return;
+        }
+
+        const groups = {};
+        data.forEach(row => {
+          const vendor = row.nama_vendor || '(Tanpa Vendor)';
+          if (!groups[vendor]) groups[vendor] = [];
+          groups[vendor].push(row);
+        });
+
+        Object.keys(groups).sort().forEach(vendorName => {
+          const rows = groups[vendorName];
+          let grandTotal = 0;
+          const satuanMap = {};
+
+          rows.forEach(row => {
+            const qty = utils.parseQty(row.jumlah);
+            const price = parseInt(row.harga) || 0;
+            const total = qty * price;
+            grandTotal += total;
+            const satuan = row.satuan || '';
+            if (!satuanMap[satuan]) satuanMap[satuan] = { qty: 0, total: 0 };
+            satuanMap[satuan].qty += qty;
+            satuanMap[satuan].total += total;
+          });
+
+          const rowsHTML = rows.map((row, idx) => {
+            const qty = utils.parseQty(row.jumlah);
+            const price = parseInt(row.harga) || 0;
+            const total = qty * price;
+            return `<tr>
+              <td>${idx + 1}</td>
+              <td>${utils.formatDate(row.tanggal_masuk)}</td>
+              <td>${row.no_seri || '-'}</td>
+              <td style="text-align:left;">${row.nama_sparepart || row.nama_barang || ''}</td>
+              <td>${qty}</td>
+              <td>${row.satuan || ''}</td>
+              <td style="text-align:right;">${utils.formatCurrency(price)}</td>
+              <td style="text-align:right;">${utils.formatCurrency(total)}</td>
+              <td style="text-align:left;">${row.kendaraan || '-'}</td>
+              <td>${utils.formatDate(row.tanggal_pemakaian)}</td>
+            </tr>`;
+          }).join('');
+
+          const satuanSummary = Object.keys(satuanMap).filter(s => s).map(s =>
+            `<span>${utils.capitalize(s)}: <strong>${satuanMap[s].qty}</strong></span>`
+          ).join(' &nbsp;|&nbsp; ');
+
+          const group = document.createElement('div');
+          group.className = 'vendor-group';
+          group.innerHTML = `
+            <button type="button" class="vendor-group-header" onclick="toggleVendorGroup(this)">
+              <div class="vendor-header-left">
+                <span class="vendor-toggle-icon">▶</span>
+                <span class="vendor-name">${vendorName}</span>
+                <span class="vendor-item-count">${rows.length} item</span>
+              </div>
+              <div class="vendor-total-badge">Total: ${utils.formatCurrency(grandTotal)}</div>
+            </button>
+            <div class="vendor-group-body">
+              <table class="vendor-detail-table">
+                <thead>
+                  <tr>
+                    <th>No</th><th>Tgl Masuk</th><th>No Seri</th>
+                    <th>Nama Barang</th><th>Jumlah</th><th>Satuan</th>
+                    <th>Harga Satuan</th><th>Total</th><th>Kendaraan</th><th>Tgl Pemakaian</th>
+                  </tr>
+                </thead>
+                <tbody>${rowsHTML}</tbody>
+              </table>
+              <div class="vendor-mini-summary">
+                <div class="vendor-mini-summary-items">${satuanSummary}</div>
+                <div class="vendor-mini-summary-total">Grand Total: ${utils.formatCurrency(grandTotal)}</div>
+              </div>
+            </div>`;
+          container.appendChild(group);
+        });
+
+        this.updateSummary();
+      },
+
+      renderSisaStokVendorAccordion(data) {
+        document.getElementById('tableContainer').style.display = 'none';
+        const container = $('vendorAccordion');
+        container.style.display = 'block';
+        container.innerHTML = '';
+
+        if (!data.length) {
+          container.innerHTML = '<div style="text-align:center;padding:40px;color:#6c757d;font-size:14px;">Tidak ada data sisa stok vendor ditemukan</div>';
+          this.updateSummary();
+          return;
+        }
+
+        const groups = {};
+        data.forEach(row => {
+          const vendor = row.nama_vendor || '(Tanpa Vendor)';
+          if (!groups[vendor]) groups[vendor] = [];
+          groups[vendor].push(row);
+        });
+
+        Object.keys(groups).sort().forEach(vendorName => {
+          const rows = groups[vendorName];
+          let totalMasuk = 0, totalPakai = 0, nilaiSisa = 0;
+
+          rows.forEach(row => {
+            const masuk = parseFloat(row.jumlah_masuk) || 0;
+            const pakai = parseFloat(row.jumlah_pakai) || 0;
+            const sisa  = masuk - pakai;
+            totalMasuk += masuk;
+            totalPakai += pakai;
+            nilaiSisa  += sisa * (parseInt(row.harga) || 0);
+          });
+          const totalSisa = totalMasuk - totalPakai;
+
+          const rowsHTML = rows.map((row, idx) => {
+            const masuk = parseFloat(row.jumlah_masuk) || 0;
+            const pakai = parseFloat(row.jumlah_pakai) || 0;
+            const sisa  = masuk - pakai;
+            const sisaStyle = sisa <= 0
+              ? 'color:#dc3545;font-weight:700;'
+              : sisa < 3
+                ? 'color:#fd7e14;font-weight:700;'
+                : 'color:#28a745;font-weight:700;';
+            const rowBg = sisa <= 0 ? 'background:#ffe0e0;' : sisa < 3 ? 'background:#fff3cd;' : '';
+            const jenisLower = (row.jenis || '').toLowerCase();
+            return `<tr style="${rowBg}">
+              <td>${idx + 1}</td>
+              <td>${utils.formatDate(row.tanggal_masuk)}</td>
+              <td>${row.no_seri || '-'}</td>
+              <td style="text-align:left;">${row.nama_barang || ''}</td>
+              <td><span class="badge-jenis badge-${jenisLower}">${row.jenis || '-'}</span></td>
+              <td>${row.satuan || ''}</td>
+              <td style="text-align:right;">${utils.formatCurrency(parseInt(row.harga) || 0)}</td>
+              <td style="text-align:center;">${masuk}</td>
+              <td style="text-align:center;">${pakai}</td>
+              <td style="text-align:center;${sisaStyle}">${sisa}</td>
+            </tr>`;
+          }).join('');
+
+          const group = document.createElement('div');
+          group.className = 'vendor-group';
+          group.innerHTML = `
+            <button type="button" class="vendor-group-header" onclick="toggleVendorGroup(this)">
+              <div class="vendor-header-left">
+                <span class="vendor-toggle-icon">▶</span>
+                <span class="vendor-name">${vendorName}</span>
+                <span class="vendor-item-count">${rows.length} item</span>
+              </div>
+              <div class="vendor-total-badge" style="color:${totalSisa <= 0 ? '#dc3545' : '#28a745'};">
+                Sisa: ${totalSisa} &nbsp;|&nbsp; Nilai: ${utils.formatCurrency(nilaiSisa)}
+              </div>
+            </button>
+            <div class="vendor-group-body">
+              <table class="vendor-detail-table">
+                <thead>
+                  <tr>
+                    <th>No</th><th>Tgl Masuk</th><th>No Seri</th>
+                    <th>Nama Barang</th><th>Jenis</th><th>Satuan</th>
+                    <th>Harga Satuan</th><th>Jml Masuk</th><th>Jml Dipakai</th><th>Sisa Stok</th>
+                  </tr>
+                </thead>
+                <tbody>${rowsHTML}</tbody>
+              </table>
+              <div class="vendor-mini-summary">
+                <div class="vendor-mini-summary-items">
+                  Masuk: <strong>${totalMasuk}</strong>
+                  &nbsp;|&nbsp; Dipakai: <strong>${totalPakai}</strong>
+                  &nbsp;|&nbsp; Sisa: <strong style="${totalSisa <= 0 ? 'color:#dc3545;' : ''}">${totalSisa}</strong>
+                </div>
+                <div class="vendor-mini-summary-total">Nilai Sisa: ${utils.formatCurrency(nilaiSisa)}</div>
+              </div>
+            </div>`;
+          container.appendChild(group);
+        });
+
+        this.updateSummary();
       }
     };
 
@@ -823,13 +1152,28 @@ const API_BASE_URL = '/api';
             if (state.currentFilter.pemakaianFilterType !== 'semua' && state.currentFilter.pemakaianStart && state.currentFilter.pemakaianEnd)
               filters.push(['Tanggal Pemakaian', state.currentFilter.pemakaianStart === state.currentFilter.pemakaianEnd ? state.currentFilter.pemakaianStart : `${state.currentFilter.pemakaianStart} s/d ${state.currentFilter.pemakaianEnd}`]);
           }
-        } else if (tipe === 'sisa_stok') {
+        } else if (tipe === 'sisa_stok' || tipe === 'sisa_stok_per_vendor') {
           if (state.currentFilter.vendorNama)     filters.push(['Vendor',      state.currentFilter.vendorNama]);
           if (state.currentFilter.barang)         filters.push(['Nama Barang', state.currentFilter.barang]);
           if (state.currentFilter.kendaraanLabel) filters.push(['Kendaraan',   state.currentFilter.kendaraanLabel]);
           if (state.currentFilter.noSeri)         filters.push(['No Seri',     state.currentFilter.noSeri]);
           if (state.currentFilter.satuanFilter && state.currentFilter.satuanFilter !== 'semua')
             filters.push(['Satuan', utils.capitalize(state.currentFilter.satuanFilter)]);
+          if (state.currentFilter.masukFilterType) {
+            filters.push(['Periode Tanggal Masuk', CONFIG.filterLabels[state.currentFilter.masukFilterType]]);
+            if (state.currentFilter.masukStart && state.currentFilter.masukEnd)
+              filters.push(['Tanggal Masuk', state.currentFilter.masukStart === state.currentFilter.masukEnd ? state.currentFilter.masukStart : `${state.currentFilter.masukStart} s/d ${state.currentFilter.masukEnd}`]);
+          }
+          if (state.currentFilter.pemakaianFilterType) {
+            filters.push(['Periode Tanggal Pemakaian', CONFIG.filterLabels[state.currentFilter.pemakaianFilterType]]);
+            if (state.currentFilter.pemakaianFilterType !== 'semua' && state.currentFilter.pemakaianStart && state.currentFilter.pemakaianEnd)
+              filters.push(['Tanggal Pemakaian', state.currentFilter.pemakaianStart === state.currentFilter.pemakaianEnd ? state.currentFilter.pemakaianStart : `${state.currentFilter.pemakaianStart} s/d ${state.currentFilter.pemakaianEnd}`]);
+          }
+        } else if (tipe === 'pemakaian_per_vendor') {
+          if (state.currentFilter.vendorNama)     filters.push(['Vendor',      state.currentFilter.vendorNama]);
+          if (state.currentFilter.barang)         filters.push(['Nama Barang', state.currentFilter.barang]);
+          if (state.currentFilter.kendaraanLabel) filters.push(['Kendaraan',   state.currentFilter.kendaraanLabel]);
+          if (state.currentFilter.noSeri)         filters.push(['No Seri',     state.currentFilter.noSeri]);
           if (state.currentFilter.masukFilterType) {
             filters.push(['Periode Tanggal Masuk', CONFIG.filterLabels[state.currentFilter.masukFilterType]]);
             if (state.currentFilter.masukStart && state.currentFilter.masukEnd)
@@ -889,6 +1233,26 @@ const API_BASE_URL = '/api';
             parts.push(state.currentFilter.masukStart === state.currentFilter.masukEnd ? `Masuk_${state.currentFilter.masukStart}` : `Masuk_${state.currentFilter.masukStart}_sd_${state.currentFilter.masukEnd}`);
           if (state.currentFilter.pemakaianFilterType !== 'semua' && state.currentFilter.pemakaianStart && state.currentFilter.pemakaianEnd)
             parts.push(state.currentFilter.pemakaianStart === state.currentFilter.pemakaianEnd ? `Pakai_${state.currentFilter.pemakaianStart}` : `Pakai_${state.currentFilter.pemakaianStart}_sd_${state.currentFilter.pemakaianEnd}`);
+        } else if (tipe === 'pemakaian_per_vendor') {
+          parts.push('PemakaianVendor');
+          if (state.currentFilter.vendorNama)     parts.push(state.currentFilter.vendorNama.replace(/\s+/g, '_'));
+          if (state.currentFilter.barang)         parts.push(state.currentFilter.barang.replace(/\s+/g, '_'));
+          if (state.currentFilter.noSeri)         parts.push(state.currentFilter.noSeri.replace(/\s+/g, '_'));
+          if (state.currentFilter.kendaraanLabel) parts.push(state.currentFilter.kendaraanLabel.replace(/[\s-]+/g, '_'));
+          if (state.currentFilter.masukStart && state.currentFilter.masukEnd)
+            parts.push(state.currentFilter.masukStart === state.currentFilter.masukEnd ? `Masuk_${state.currentFilter.masukStart}` : `Masuk_${state.currentFilter.masukStart}_sd_${state.currentFilter.masukEnd}`);
+          if (state.currentFilter.pemakaianFilterType !== 'semua' && state.currentFilter.pemakaianStart && state.currentFilter.pemakaianEnd)
+            parts.push(state.currentFilter.pemakaianStart === state.currentFilter.pemakaianEnd ? `Pakai_${state.currentFilter.pemakaianStart}` : `Pakai_${state.currentFilter.pemakaianStart}_sd_${state.currentFilter.pemakaianEnd}`);
+        } else if (tipe === 'sisa_stok_per_vendor') {
+          parts.push('SisaStokVendor');
+          if (state.currentFilter.vendorNama)     parts.push(state.currentFilter.vendorNama.replace(/\s+/g, '_'));
+          if (state.currentFilter.barang)         parts.push(state.currentFilter.barang.replace(/\s+/g, '_'));
+          if (state.currentFilter.noSeri)         parts.push(state.currentFilter.noSeri.replace(/\s+/g, '_'));
+          if (state.currentFilter.kendaraanLabel) parts.push(state.currentFilter.kendaraanLabel.replace(/[\s-]+/g, '_'));
+          if (state.currentFilter.masukStart && state.currentFilter.masukEnd)
+            parts.push(state.currentFilter.masukStart === state.currentFilter.masukEnd ? `Masuk_${state.currentFilter.masukStart}` : `Masuk_${state.currentFilter.masukStart}_sd_${state.currentFilter.masukEnd}`);
+          if (state.currentFilter.pemakaianFilterType !== 'semua' && state.currentFilter.pemakaianStart && state.currentFilter.pemakaianEnd)
+            parts.push(state.currentFilter.pemakaianStart === state.currentFilter.pemakaianEnd ? `Pakai_${state.currentFilter.pemakaianStart}` : `Pakai_${state.currentFilter.pemakaianStart}_sd_${state.currentFilter.pemakaianEnd}`);
         }
 
         parts.push(date);
@@ -937,6 +1301,77 @@ const API_BASE_URL = '/api';
 
           const ws = XLSX.utils.aoa_to_sheet(wsData);
           ws['!cols'] = [{wch:5},{wch:12},{wch:15},{wch:30},{wch:8},{wch:8},{wch:14},{wch:18}];
+          const wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws, 'Rekap');
+          XLSX.writeFile(wb, this.generateFileName('xlsx'));
+          return;
+        }
+
+        if (tipe === 'pemakaian_per_vendor') {
+          const groups = {};
+          state.currentData.forEach(row => {
+            const v = row.nama_vendor || '(Tanpa Vendor)';
+            if (!groups[v]) groups[v] = [];
+            groups[v].push(row);
+          });
+          let overallQty = 0, overallTotal = 0;
+          Object.keys(groups).sort().forEach(vendorName => {
+            const rows = groups[vendorName];
+            wsData.push([`VENDOR: ${vendorName}`]);
+            wsData.push(['No', 'Tgl Masuk', 'No Seri', 'Nama Barang', 'Jumlah', 'Satuan', 'Harga Satuan', 'Total', 'Kendaraan', 'Tgl Pemakaian']);
+            let vQty = 0, vTotal = 0;
+            rows.forEach((row, idx) => {
+              const qty = utils.parseQty(row.jumlah);
+              const price = parseInt(row.harga) || 0;
+              const total = qty * price;
+              vQty += qty; vTotal += total;
+              wsData.push([idx+1, utils.formatDate(row.tanggal_masuk), row.no_seri||'-', row.nama_sparepart||row.nama_barang||'', qty, row.satuan||'', price, total, row.kendaraan||'-', utils.formatDate(row.tanggal_pemakaian)]);
+            });
+            overallQty += vQty; overallTotal += vTotal;
+            wsData.push(['', '', '', 'Subtotal:', vQty, '', '', `Rp ${vTotal.toLocaleString('id-ID')}`, '', '']);
+            wsData.push([]);
+          });
+          wsData.push(['RINGKASAN KESELURUHAN:']);
+          wsData.push([`Total Item: ${overallQty}`, '', '', '', '', '', '', `Grand Total: Rp ${overallTotal.toLocaleString('id-ID')}`]);
+
+          const ws = XLSX.utils.aoa_to_sheet(wsData);
+          ws['!cols'] = [{wch:5},{wch:12},{wch:15},{wch:30},{wch:8},{wch:8},{wch:14},{wch:18},{wch:22},{wch:14}];
+          const wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws, 'Rekap');
+          XLSX.writeFile(wb, this.generateFileName('xlsx'));
+          return;
+        }
+
+        if (tipe === 'sisa_stok_per_vendor') {
+          const groups = {};
+          state.currentData.forEach(row => {
+            const v = row.nama_vendor || '(Tanpa Vendor)';
+            if (!groups[v]) groups[v] = [];
+            groups[v].push(row);
+          });
+          let gMasuk = 0, gPakai = 0, gNilai = 0;
+          Object.keys(groups).sort().forEach(vendorName => {
+            const rows = groups[vendorName];
+            wsData.push([`VENDOR: ${vendorName}`]);
+            wsData.push(['No', 'Tgl Masuk', 'No Seri', 'Nama Barang', 'Jenis', 'Satuan', 'Harga Satuan', 'Jml Masuk', 'Jml Dipakai', 'Sisa Stok']);
+            let vMasuk = 0, vPakai = 0, vNilai = 0;
+            rows.forEach((row, idx) => {
+              const masuk = parseFloat(row.jumlah_masuk) || 0;
+              const pakai = parseFloat(row.jumlah_pakai) || 0;
+              const sisa  = masuk - pakai;
+              const harga = parseInt(row.harga) || 0;
+              vMasuk += masuk; vPakai += pakai; vNilai += sisa * harga;
+              wsData.push([idx+1, utils.formatDate(row.tanggal_masuk), row.no_seri||'-', row.nama_barang||'', row.jenis||'-', row.satuan||'', harga, masuk, pakai, sisa]);
+            });
+            gMasuk += vMasuk; gPakai += vPakai; gNilai += vNilai;
+            wsData.push(['', '', '', 'Subtotal:', '', '', '', vMasuk, vPakai, vMasuk - vPakai, `Nilai Sisa: Rp ${vNilai.toLocaleString('id-ID')}`]);
+            wsData.push([]);
+          });
+          wsData.push(['RINGKASAN KESELURUHAN:']);
+          wsData.push([`Total Masuk: ${gMasuk}`, `Total Dipakai: ${gPakai}`, `Total Sisa: ${gMasuk - gPakai}`, '', '', '', '', '', '', `Nilai Sisa: Rp ${gNilai.toLocaleString('id-ID')}`]);
+
+          const ws = XLSX.utils.aoa_to_sheet(wsData);
+          ws['!cols'] = [{wch:5},{wch:12},{wch:15},{wch:30},{wch:10},{wch:8},{wch:14},{wch:12},{wch:12},{wch:12},{wch:22}];
           const wb = XLSX.utils.book_new();
           XLSX.utils.book_append_sheet(wb, ws, 'Rekap');
           XLSX.writeFile(wb, this.generateFileName('xlsx'));
@@ -1094,6 +1529,135 @@ const API_BASE_URL = '/api';
           return;
         }
 
+        if (tipe === 'pemakaian_per_vendor') {
+          const groups = {};
+          state.currentData.forEach(row => {
+            const v = row.nama_vendor || '(Tanpa Vendor)';
+            if (!groups[v]) groups[v] = [];
+            groups[v].push(row);
+          });
+          const vendorHead = [['No', 'Tgl Masuk', 'No Seri', 'Nama Barang', 'Jumlah', 'Satuan', 'Harga Satuan', 'Total', 'Kendaraan', 'Tgl Pemakaian']];
+          let curY = yPos + 8;
+          let overallQty = 0, overallTotal = 0;
+
+          Object.keys(groups).sort().forEach(vendorName => {
+            const rows = groups[vendorName];
+            let vQty = 0, vTotal = 0;
+            const vendorBody = rows.map((row, idx) => {
+              const qty = utils.parseQty(row.jumlah);
+              const price = parseInt(row.harga) || 0;
+              const total = qty * price;
+              vQty += qty; vTotal += total;
+              return [idx+1, utils.formatDate(row.tanggal_masuk), row.no_seri||'-', row.nama_sparepart||row.nama_barang||'', qty, row.satuan||'', utils.formatCurrency(price), utils.formatCurrency(total), row.kendaraan||'-', utils.formatDate(row.tanggal_pemakaian)];
+            });
+            overallQty += vQty; overallTotal += vTotal;
+            vendorBody.push(['', '', '', 'Subtotal:', vQty, '', '', utils.formatCurrency(vTotal), '', '']);
+
+            if (curY > 175) { doc.addPage(); curY = 20; }
+            doc.setFontSize(9); doc.setFont(undefined, 'bold');
+            doc.setTextColor(52, 58, 64);
+            doc.text(`VENDOR: ${vendorName}`, 14, curY);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont(undefined, 'normal');
+            curY += 4;
+
+            doc.autoTable({
+              head: vendorHead,
+              body: vendorBody,
+              startY: curY,
+              styles: { fontSize: 6.5, cellPadding: 2, overflow: 'linebreak', textColor: 0 },
+              headStyles: { fillColor: [52, 58, 64], textColor: 255, fontStyle: 'bold', fontSize: 6.5 },
+              alternateRowStyles: { fillColor: [245, 245, 245] },
+              didParseCell: (data) => {
+                if (data.section === 'body' && data.row.index === vendorBody.length - 1) {
+                  data.cell.styles.fontStyle = 'bold';
+                  data.cell.styles.fillColor = [230, 230, 230];
+                }
+              },
+              margin: { left: 14, right: 14 }
+            });
+            curY = doc.lastAutoTable.finalY + 8;
+          });
+
+          if (curY + 20 > 200) { doc.addPage(); curY = 20; }
+          doc.setFontSize(10); doc.setFont(undefined, 'bold');
+          doc.text('RINGKASAN KESELURUHAN:', 14, curY);
+          doc.setFont(undefined, 'normal'); doc.setFontSize(9);
+          doc.text(`Total Item: ${overallQty}`, 14, curY + 6);
+          doc.text(`Grand Total: ${utils.formatCurrency(overallTotal)}`, 160, curY + 6);
+          doc.save(this.generateFileName('pdf'));
+          return;
+        }
+
+        if (tipe === 'sisa_stok_per_vendor') {
+          const groups = {};
+          state.currentData.forEach(row => {
+            const v = row.nama_vendor || '(Tanpa Vendor)';
+            if (!groups[v]) groups[v] = [];
+            groups[v].push(row);
+          });
+          const vendorHead = [['No', 'Tgl Masuk', 'No Seri', 'Nama Barang', 'Jenis', 'Satuan', 'Harga Satuan', 'Jml Masuk', 'Jml Dipakai', 'Sisa Stok']];
+          let curY = yPos + 8;
+          let gMasuk = 0, gPakai = 0, gNilai = 0;
+
+          Object.keys(groups).sort().forEach(vendorName => {
+            const rows = groups[vendorName];
+            let vMasuk = 0, vPakai = 0, vNilai = 0;
+            const vendorBody = rows.map((row, idx) => {
+              const masuk = parseFloat(row.jumlah_masuk) || 0;
+              const pakai = parseFloat(row.jumlah_pakai) || 0;
+              const sisa  = masuk - pakai;
+              const harga = parseInt(row.harga) || 0;
+              vMasuk += masuk; vPakai += pakai; vNilai += sisa * harga;
+              return [idx+1, utils.formatDate(row.tanggal_masuk), row.no_seri||'-', row.nama_barang||'', row.jenis||'-', row.satuan||'', utils.formatCurrency(harga), masuk, pakai, sisa];
+            });
+            gMasuk += vMasuk; gPakai += vPakai; gNilai += vNilai;
+            vendorBody.push(['', '', '', `Subtotal:`, '', '', '', vMasuk, vPakai, vMasuk - vPakai]);
+
+            if (curY > 175) { doc.addPage(); curY = 20; }
+            doc.setFontSize(9); doc.setFont(undefined, 'bold');
+            doc.setTextColor(52, 58, 64);
+            doc.text(`VENDOR: ${vendorName}`, 14, curY);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont(undefined, 'normal');
+            curY += 4;
+
+            doc.autoTable({
+              head: vendorHead,
+              body: vendorBody,
+              startY: curY,
+              styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak', textColor: 0 },
+              headStyles: { fillColor: [52, 58, 64], textColor: 255, fontStyle: 'bold', fontSize: 7 },
+              alternateRowStyles: { fillColor: [245, 245, 245] },
+              didParseCell: (data) => {
+                if (data.section === 'body') {
+                  if (data.row.index === vendorBody.length - 1) {
+                    data.cell.styles.fontStyle = 'bold';
+                    data.cell.styles.fillColor = [230, 230, 230];
+                  } else if (data.column.index === 9) {
+                    const val = parseFloat(data.cell.raw);
+                    if (val <= 0) data.cell.styles.textColor = [220, 53, 69];
+                    else if (val < 3) data.cell.styles.textColor = [253, 126, 20];
+                    else data.cell.styles.textColor = [40, 167, 69];
+                    data.cell.styles.fontStyle = 'bold';
+                  }
+                }
+              },
+              margin: { left: 14, right: 14 }
+            });
+            curY = doc.lastAutoTable.finalY + 8;
+          });
+
+          if (curY + 20 > 200) { doc.addPage(); curY = 20; }
+          doc.setFontSize(10); doc.setFont(undefined, 'bold');
+          doc.text('RINGKASAN KESELURUHAN:', 14, curY);
+          doc.setFont(undefined, 'normal'); doc.setFontSize(9);
+          doc.text(`Total Masuk: ${gMasuk}  |  Total Dipakai: ${gPakai}  |  Total Sisa: ${gMasuk - gPakai}`, 14, curY + 6);
+          doc.text(`Nilai Sisa: ${utils.formatCurrency(gNilai)}`, 160, curY + 6);
+          doc.save(this.generateFileName('pdf'));
+          return;
+        }
+
         const tableData = state.currentData.map((row, idx) => {
           const qty = utils.parseQty(row.jumlah);
           const price = parseInt(row.harga) || 0;
@@ -1231,7 +1795,7 @@ const API_BASE_URL = '/api';
 
     $('barangFilter').addEventListener('input', function() {
       const tipe = $('tipeLaporan').value;
-      if (tipe !== 'stok' && tipe !== 'pemakaian_vendor' && tipe !== 'sisa_stok') return;
+      if (tipe !== 'stok' && tipe !== 'pemakaian_vendor' && tipe !== 'sisa_stok' && tipe !== 'pemakaian_per_vendor' && tipe !== 'sisa_stok_per_vendor') return;
       clearTimeout(state.searchTimeout);
       state.searchTimeout = setTimeout(() => {
         dataHandler.renderTable(dataHandler.applyFilters(state.allData));
@@ -1284,8 +1848,8 @@ const API_BASE_URL = '/api';
         } catch (error) {
           ui.showEmpty(tipe, 'Terjadi kesalahan saat memuat data');
         }
-      } else if (tipe === 'kendaraan' || tipe === 'pemakaian_vendor' || tipe === 'sisa_stok') {
-        if (tipe === 'pemakaian_vendor' || tipe === 'sisa_stok') {
+      } else if (tipe === 'kendaraan' || tipe === 'pemakaian_vendor' || tipe === 'sisa_stok' || tipe === 'pemakaian_per_vendor' || tipe === 'sisa_stok_per_vendor') {
+        if (tipe === 'pemakaian_vendor' || tipe === 'sisa_stok' || tipe === 'pemakaian_per_vendor' || tipe === 'sisa_stok_per_vendor') {
           $('filterMasukType').value    = 'semua';
           $('filterMasukStart').value   = '';
           $('filterMasukEnd').value     = '';

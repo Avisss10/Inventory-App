@@ -38,8 +38,8 @@
             <option value="stok">Stok Gudang</option>
             <option value="kendaraan">Pemakaian Kendaraan</option>
             <option value="vendor">Vendor</option>
-            <option value="pemakaian_vendor">Pemakaian Per Bon</option>
-            <option value="sisa_stok">Sisa Stok</option>
+            <option value="pemakaian_per_vendor">Pemakaian (Vendor)</option>
+            <option value="sisa_stok_per_vendor">Sisa Stok (Vendor)</option>
           </select>
         </div>
 
@@ -55,7 +55,7 @@
         </div>
 
         <!-- Periode Tanggal Masuk (Pemakaian per Bon & Sisa Stok) -->
-        <div class="filter-group filter-pemakaian_vendor filter-sisa_stok filter-hidden" id="filterMasukWaktuGroup">
+        <div class="filter-group filter-pemakaian_vendor filter-sisa_stok filter-pemakaian_per_vendor filter-sisa_stok_per_vendor filter-hidden" id="filterMasukWaktuGroup">
           <label>Periode Tanggal Masuk:</label>
           <select id="filterMasukType">
             <option value="semua">Semua Data</option>
@@ -67,19 +67,19 @@
         </div>
 
         <!-- Manual date - Masuk Dari -->
-        <div class="filter-group narrow filter-pemakaian_vendor filter-sisa_stok filter-hidden" id="filterMasukStartGroup">
+        <div class="filter-group narrow filter-pemakaian_vendor filter-sisa_stok filter-pemakaian_per_vendor filter-sisa_stok_per_vendor filter-hidden" id="filterMasukStartGroup">
           <label>Masuk - Dari:</label>
           <input type="date" id="filterMasukStart">
         </div>
 
         <!-- Manual date - Masuk Sampai -->
-        <div class="filter-group narrow filter-pemakaian_vendor filter-sisa_stok filter-hidden" id="filterMasukEndGroup">
+        <div class="filter-group narrow filter-pemakaian_vendor filter-sisa_stok filter-pemakaian_per_vendor filter-sisa_stok_per_vendor filter-hidden" id="filterMasukEndGroup">
           <label>Masuk - Sampai:</label>
           <input type="date" id="filterMasukEnd">
         </div>
 
         <!-- Periode Tanggal Pemakaian (Pemakaian per Bon & Sisa Stok) -->
-        <div class="filter-group filter-pemakaian_vendor filter-sisa_stok filter-hidden" id="filterPemakaianWaktuGroup">
+        <div class="filter-group filter-pemakaian_vendor filter-sisa_stok filter-pemakaian_per_vendor filter-sisa_stok_per_vendor filter-hidden" id="filterPemakaianWaktuGroup">
           <label>Periode Tanggal Pemakaian:</label>
           <select id="filterPemakaianType">
             <option value="semua">Semua Data</option>
@@ -91,13 +91,13 @@
         </div>
 
         <!-- Manual date - Pemakaian Dari -->
-        <div class="filter-group narrow filter-pemakaian_vendor filter-sisa_stok filter-hidden" id="filterPemakaianStartGroup">
+        <div class="filter-group narrow filter-pemakaian_vendor filter-sisa_stok filter-pemakaian_per_vendor filter-sisa_stok_per_vendor filter-hidden" id="filterPemakaianStartGroup">
           <label>Pemakaian - Dari:</label>
           <input type="date" id="filterPemakaianStart">
         </div>
 
         <!-- Manual date - Pemakaian Sampai -->
-        <div class="filter-group narrow filter-pemakaian_vendor filter-sisa_stok filter-hidden" id="filterPemakaianEndGroup">
+        <div class="filter-group narrow filter-pemakaian_vendor filter-sisa_stok filter-pemakaian_per_vendor filter-sisa_stok_per_vendor filter-hidden" id="filterPemakaianEndGroup">
           <label>Pemakaian - Sampai:</label>
           <input type="date" id="filterPemakaianEnd">
         </div>
@@ -118,21 +118,21 @@
       <div class="filter-row">
 
         <!-- Nama Barang (Stok, Pemakaian Per Bon, Sisa Stok) -->
-        <div class="filter-group wide filter-stok filter-pemakaian_vendor filter-sisa_stok">
+        <div class="filter-group wide filter-stok filter-pemakaian_vendor filter-sisa_stok filter-pemakaian_per_vendor filter-sisa_stok_per_vendor">
           <label>Nama Barang:</label>
           <input type="text" id="barangFilter" placeholder="Ketik untuk mencari barang..." list="barangList">
           <datalist id="barangList"></datalist>
         </div>
 
         <!-- Vendor (semua tipe) -->
-        <div class="filter-group wide filter-stok filter-vendor filter-kendaraan filter-pemakaian_vendor filter-sisa_stok">
+        <div class="filter-group wide filter-stok filter-vendor filter-kendaraan filter-pemakaian_vendor filter-sisa_stok filter-pemakaian_per_vendor filter-sisa_stok_per_vendor">
           <label>Vendor:</label>
           <input type="text" id="vendorFilter" placeholder="Ketik untuk mencari Vendor..." list="vendorList">
           <datalist id="vendorList"></datalist>
         </div>
 
         <!-- Filter Stok (Stok & Sisa Stok - habis/semua) -->
-        <div class="filter-group filter-stok filter-sisa_stok">
+        <div class="filter-group filter-stok filter-sisa_stok filter-sisa_stok_per_vendor">
           <label>Filter Stok:</label>
           <select id="stokFilter">
             <option value="semua">Semua Stok</option>
@@ -141,7 +141,7 @@
         </div>
 
         <!-- Satuan -->
-        <div class="filter-group filter-stok filter-sisa_stok">
+        <div class="filter-group filter-stok filter-sisa_stok filter-sisa_stok_per_vendor">
           <label>Satuan:</label>
           <select id="satuanFilter">
             <option value="semua">Semua Satuan</option>
@@ -155,7 +155,7 @@
         </div>
 
         <!-- Kendaraan (Kendaraan, Pemakaian Per Bon, Sisa Stok) -->
-        <div class="filter-group wide filter-kendaraan filter-pemakaian_vendor filter-sisa_stok filter-hidden">
+        <div class="filter-group wide filter-kendaraan filter-pemakaian_vendor filter-sisa_stok filter-pemakaian_per_vendor filter-sisa_stok_per_vendor filter-hidden">
           <label>Kendaraan:</label>
           <input type="text" id="kendaraanFilter" placeholder="Ketik nama/plat kendaraan..." list="kendaraanFilterList">
           <datalist id="kendaraanFilterList"></datalist>
@@ -184,7 +184,7 @@
         </div>
 
         <!-- No Seri (Pemakaian Per Bon & Sisa Stok) -->
-        <div class="filter-group wide filter-pemakaian_vendor filter-sisa_stok filter-hidden">
+        <div class="filter-group wide filter-pemakaian_vendor filter-sisa_stok filter-pemakaian_per_vendor filter-sisa_stok_per_vendor filter-hidden">
           <label>No Seri:</label>
           <input type="text" id="noSeriFilter" placeholder="Ketik no seri...">
         </div>
