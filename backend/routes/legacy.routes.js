@@ -1946,51 +1946,96 @@ router.get("/api/rekap", (req, res) => {
         let params = [];
 
         if (type === 'stok') {
-            sql = `
-        SELECT
-          s.id,
-          s.no_seri,
-          s.nama_sparepart,
-          '' AS merk,
-          s.jumlah,
-          s.satuan,
-          s.harga,
-          (s.jumlah * s.harga) AS total,
-          v.nama_vendor,
-          'Gudang Utama' AS lokasi,
-          s.tgl_sparepart_masuk AS tanggal
-        FROM stok_sparepart s
-        LEFT JOIN vendor v ON s.id_vendor = v.id
-        WHERE 1=1
-      `;
+            const jenisBarang = req.query.jenis_barang || 'semua';
+            const parts = [];
 
-            if (start && end) {
-                sql += " AND DATE(s.tgl_sparepart_masuk) BETWEEN ? AND ?";
-                params.push(start, end);
-            } else if (start) {
-                sql += " AND DATE(s.tgl_sparepart_masuk) = ?";
-                params.push(start);
-            } else if (end) {
-                sql += " AND DATE(s.tgl_sparepart_masuk) = ?";
-                params.push(end);
+            if (jenisBarang === 'semua' || jenisBarang === 'sparepart') {
+                let q = `
+          SELECT
+            s.id,
+            s.no_seri,
+            s.nama_sparepart,
+            '' AS merk,
+            s.jumlah,
+            s.satuan,
+            s.harga,
+            (s.jumlah * s.harga) AS total,
+            v.nama_vendor,
+            'Gudang Utama' AS lokasi,
+            s.tgl_sparepart_masuk AS tanggal
+          FROM stok_sparepart s
+          LEFT JOIN vendor v ON s.id_vendor = v.id
+          WHERE 1=1
+        `;
+                if (start && end) { q += " AND DATE(s.tgl_sparepart_masuk) BETWEEN ? AND ?"; params.push(start, end); }
+                else if (start) { q += " AND DATE(s.tgl_sparepart_masuk) = ?"; params.push(start); }
+                else if (end) { q += " AND DATE(s.tgl_sparepart_masuk) = ?"; params.push(end); }
+                if (vendor) { q += " AND s.id_vendor = ?"; params.push(vendor); }
+                if (barang) { q += " AND s.nama_sparepart LIKE ?"; params.push(`%${barang}%`); }
+                if (satuan && satuan !== 'semua') { q += " AND s.satuan = ?"; params.push(satuan); }
+                parts.push(q);
             }
 
-            if (vendor) {
-                sql += " AND s.id_vendor = ?";
-                params.push(vendor);
+            if (jenisBarang === 'semua' || jenisBarang === 'ban') {
+                let q = `
+          SELECT
+            sb.id,
+            sb.no_seri,
+            CONCAT('Ban ', sb.merk_ban) AS nama_sparepart,
+            sb.merk_ban AS merk,
+            sb.jumlah,
+            sb.satuan,
+            sb.harga,
+            (sb.jumlah * sb.harga) AS total,
+            v.nama_vendor,
+            'Gudang Utama' AS lokasi,
+            sb.tgl_ban_masuk AS tanggal
+          FROM stok_ban sb
+          LEFT JOIN vendor v ON sb.id_vendor = v.id
+          WHERE sb.id NOT IN (
+              SELECT id_stok FROM penukaran_ban WHERE id_stok IS NOT NULL
+          ) AND sb.id NOT IN (
+              SELECT id_stok FROM histori_ban WHERE id_stok IS NOT NULL
+          )
+        `;
+                if (start && end) { q += " AND DATE(sb.tgl_ban_masuk) BETWEEN ? AND ?"; params.push(start, end); }
+                else if (start) { q += " AND DATE(sb.tgl_ban_masuk) = ?"; params.push(start); }
+                else if (end) { q += " AND DATE(sb.tgl_ban_masuk) = ?"; params.push(end); }
+                if (vendor) { q += " AND sb.id_vendor = ?"; params.push(vendor); }
+                if (barang) { q += " AND CONCAT('Ban ', sb.merk_ban) LIKE ?"; params.push(`%${barang}%`); }
+                if (satuan && satuan !== 'semua') { q += " AND sb.satuan = ?"; params.push(satuan); }
+                parts.push(q);
             }
 
-            if (barang) {
-                sql += " AND s.nama_sparepart LIKE ?";
-                params.push(`%${barang}%`);
+            if (jenisBarang === 'semua' || jenisBarang === 'oli') {
+                let q = `
+          SELECT
+            so.id,
+            om.no_seri,
+            om.nama_oli AS nama_sparepart,
+            '' AS merk,
+            so.total_stok AS jumlah,
+            om.satuan,
+            om.harga,
+            (so.total_stok * om.harga) AS total,
+            v.nama_vendor,
+            'Gudang Utama' AS lokasi,
+            om.tanggal_masuk AS tanggal
+          FROM stok_oli so
+          JOIN oli_masuk om ON so.id_oli_masuk = om.id
+          LEFT JOIN vendor v ON om.id_vendor = v.id
+          WHERE so.total_stok > 0
+        `;
+                if (start && end) { q += " AND DATE(om.tanggal_masuk) BETWEEN ? AND ?"; params.push(start, end); }
+                else if (start) { q += " AND DATE(om.tanggal_masuk) = ?"; params.push(start); }
+                else if (end) { q += " AND DATE(om.tanggal_masuk) = ?"; params.push(end); }
+                if (vendor) { q += " AND om.id_vendor = ?"; params.push(vendor); }
+                if (barang) { q += " AND om.nama_oli LIKE ?"; params.push(`%${barang}%`); }
+                if (satuan && satuan !== 'semua') { q += " AND om.satuan = ?"; params.push(satuan); }
+                parts.push(q);
             }
 
-            if (satuan && satuan !== 'semua') {
-                sql += " AND s.satuan = ?";
-                params.push(satuan);
-            }
-
-            sql += " ORDER BY s.tgl_sparepart_masuk DESC, s.id DESC";
+            sql = parts.join(' UNION ALL ') + " ORDER BY tanggal DESC, id DESC";
 
         } else if (type === 'kendaraan') {
             const jenisBarang = req.query.jenis_barang || 'semua';

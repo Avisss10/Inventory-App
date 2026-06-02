@@ -3,7 +3,7 @@ const API_BASE_URL = '/api';
     const CONFIG = {
       columnCounts: { stok: 8, kendaraan: 11, vendor: 9, pemakaian_vendor: 11, sisa_stok: 11 },
       headers: {
-        stok: ['No', 'No Seri', 'Nama Sparepart', 'Jumlah', 'Harga Satuan', 'Total', 'Vendor', 'Tanggal'],
+        stok: ['No', 'No Seri', 'Nama Barang', 'Jumlah', 'Harga Satuan', 'Total', 'Vendor', 'Tanggal'],
         kendaraan: ['No', 'Tanggal', 'Kendaraan', 'Nama Barang', 'Jumlah', 'Satuan', 'Harga Satuan', 'Total', 'Vendor', 'Penanggung Jawab', 'No Seri / Keterangan'],
         vendor: ['No', 'Tanggal', 'Vendor', 'No Seri', 'Nama Barang', 'Jumlah', 'Satuan', 'Harga Satuan', 'Total'],
         pemakaian_vendor: ['No', 'Tanggal Masuk', 'No Seri', 'Nama Barang', 'Jumlah', 'Satuan', 'Harga Satuan', 'Total', 'Vendor', 'Kendaraan', 'Tanggal Pemakaian'],
@@ -244,13 +244,15 @@ const API_BASE_URL = '/api';
             const vendorId = vendorNama ? state.vendorNameToId[vendorNama] : '';
             const barang = $('barangFilter').value;
             const satuan = $('satuanFilter').value;
+            const jenisStok = $('jenisStokFilter').value;
             const dateParams = $('filterType').value !== 'hari' ? `&start=${dateRange.start}&end=${dateRange.end}` : '';
-            
-            url = `/rekap?type=stok&vendor=${vendorId}&barang=${barang}&satuan=${satuan}${dateParams}`;
+
+            url = `/rekap?type=stok&vendor=${vendorId}&barang=${barang}&satuan=${satuan}&jenis_barang=${jenisStok}${dateParams}`;
             state.currentFilter = {
               vendor: vendorId,
               barang,
               vendorNama: vendorNama,
+              jenisStok,
               stokFilter: $('stokFilter').value,
               satuanFilter: satuan,
               startDate: $('filterType').value === 'hari' ? '' : dateRange.start,
@@ -777,6 +779,7 @@ const API_BASE_URL = '/api';
         const filters = [];
 
         if (tipe === 'stok') {
+          if (state.currentFilter.jenisStok && state.currentFilter.jenisStok !== 'semua') filters.push(['Jenis Barang', utils.capitalize(state.currentFilter.jenisStok)]);
           if (state.currentFilter.vendorNama) filters.push(['Vendor', state.currentFilter.vendorNama]);
           if (state.currentFilter.barang) filters.push(['Nama Barang', state.currentFilter.barang]);
           if (state.currentFilter.stokFilter === 'habis') filters.push(['Filter Stok', 'Stok = 0 Item']);
@@ -1254,6 +1257,7 @@ const API_BASE_URL = '/api';
       $('barangFilter').value    = '';
       $('stokFilter').value      = 'semua';
       $('satuanFilter').value    = 'semua';
+      $('jenisStokFilter').value   = 'semua';
       $('jenisBarangFilter').value = 'semua';
 
       $('filterStartGroup').classList.add('filter-hidden');
@@ -1267,12 +1271,13 @@ const API_BASE_URL = '/api';
       if (tipe === 'stok') {
         state.currentFilter = {
           vendor: '', barang: '', vendorNama: '',
+          jenisStok: 'semua',
           stokFilter: 'semua', satuanFilter: 'semua',
           startDate: today, endDate: today,
           filterType: 'hari', tipe: 'stok'
         };
         try {
-          const data = await api.fetch('/rekap?type=stok');
+          const data = await api.fetch('/rekap?type=stok&jenis_barang=semua');
           state.allData = data;
           dataHandler.renderTable(dataHandler.applyFilters(data));
           ui.showLowStockAlert(dataHandler.applyFilters(data));
