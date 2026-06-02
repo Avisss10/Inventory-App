@@ -156,12 +156,30 @@ const API_BASE_URL = '/api';
       },
 
       showLoading(tipe) {
-        $('rekapTable').querySelector('tbody').innerHTML = 
+        if (tipe === 'vendor') {
+          document.getElementById('tableContainer').style.display = 'none';
+          const acc = $('vendorAccordion');
+          acc.style.display = 'block';
+          acc.innerHTML = '<div style="text-align:center;padding:40px;color:#6c757d;font-size:14px;">Memuat data...</div>';
+          return;
+        }
+        document.getElementById('tableContainer').style.display = '';
+        $('vendorAccordion').style.display = 'none';
+        $('rekapTable').querySelector('tbody').innerHTML =
           `<tr><td colspan="${CONFIG.columnCounts[tipe]}" class="loading">Memuat data...</td></tr>`;
       },
 
       showEmpty(tipe, msg = 'Tidak ada data yang ditemukan') {
-        $('rekapTable').querySelector('tbody').innerHTML = 
+        if (tipe === 'vendor') {
+          document.getElementById('tableContainer').style.display = 'none';
+          const acc = $('vendorAccordion');
+          acc.style.display = 'block';
+          acc.innerHTML = `<div style="text-align:center;padding:40px;color:#6c757d;font-size:14px;">${msg}</div>`;
+          return;
+        }
+        document.getElementById('tableContainer').style.display = '';
+        $('vendorAccordion').style.display = 'none';
+        $('rekapTable').querySelector('tbody').innerHTML =
           `<tr><td colspan="${CONFIG.columnCounts[tipe]}" class="empty-state">${msg}</td></tr>`;
       },
 
@@ -433,6 +451,15 @@ const API_BASE_URL = '/api';
       renderTable(data) {
         state.currentData = data;
         const tipe = $('tipeLaporan').value;
+
+        if (tipe === 'vendor') {
+          this.renderVendorAccordion(data);
+          return;
+        }
+
+        document.getElementById('tableContainer').style.display = '';
+        $('vendorAccordion').style.display = 'none';
+
         const tbody = $('rekapTable').querySelector('tbody');
         tbody.innerHTML = '';
 
@@ -647,8 +674,101 @@ const API_BASE_URL = '/api';
         </div>`;
 
         $('summary').innerHTML = html;
+      },
+
+      renderVendorAccordion(data) {
+        document.getElementById('tableContainer').style.display = 'none';
+        const container = $('vendorAccordion');
+        container.style.display = 'block';
+        container.innerHTML = '';
+
+        if (!data.length) {
+          container.innerHTML = '<div style="text-align:center;padding:40px;color:#6c757d;font-size:14px;">Tidak ada data vendor ditemukan</div>';
+          this.updateSummary();
+          return;
+        }
+
+        const groups = {};
+        data.forEach(row => {
+          const vendor = row.nama_vendor || '(Tanpa Vendor)';
+          if (!groups[vendor]) groups[vendor] = [];
+          groups[vendor].push(row);
+        });
+
+        Object.keys(groups).sort().forEach(vendorName => {
+          const rows = groups[vendorName];
+          let grandTotal = 0;
+          const satuanMap = {};
+
+          rows.forEach(row => {
+            const qty = utils.parseQty(row.jumlah);
+            const price = parseInt(row.harga) || 0;
+            const total = qty * price;
+            grandTotal += total;
+            const satuan = row.satuan || '';
+            if (!satuanMap[satuan]) satuanMap[satuan] = { qty: 0, total: 0 };
+            satuanMap[satuan].qty += qty;
+            satuanMap[satuan].total += total;
+          });
+
+          const rowsHTML = rows.map((row, idx) => {
+            const qty = utils.parseQty(row.jumlah);
+            const price = parseInt(row.harga) || 0;
+            const total = qty * price;
+            return `<tr>
+              <td>${idx + 1}</td>
+              <td>${utils.formatDate(row.tanggal)}</td>
+              <td>${row.no_seri || '-'}</td>
+              <td style="text-align:left;">${row.nama_sparepart || row.nama_barang || ''}</td>
+              <td>${qty}</td>
+              <td>${row.satuan || ''}</td>
+              <td style="text-align:right;">${utils.formatCurrency(price)}</td>
+              <td style="text-align:right;">${utils.formatCurrency(total)}</td>
+            </tr>`;
+          }).join('');
+
+          const satuanSummary = Object.keys(satuanMap).filter(s => s).map(s =>
+            `<span>${utils.capitalize(s)}: <strong>${satuanMap[s].qty}</strong></span>`
+          ).join(' &nbsp;|&nbsp; ');
+
+          const group = document.createElement('div');
+          group.className = 'vendor-group';
+          group.innerHTML = `
+            <button type="button" class="vendor-group-header" onclick="toggleVendorGroup(this)">
+              <div class="vendor-header-left">
+                <span class="vendor-toggle-icon">▶</span>
+                <span class="vendor-name">${vendorName}</span>
+                <span class="vendor-item-count">${rows.length} item</span>
+              </div>
+              <div class="vendor-total-badge">Total: ${utils.formatCurrency(grandTotal)}</div>
+            </button>
+            <div class="vendor-group-body">
+              <table class="vendor-detail-table">
+                <thead>
+                  <tr>
+                    <th>No</th><th>Tanggal</th><th>No Seri</th>
+                    <th>Nama Barang</th><th>Jumlah</th><th>Satuan</th>
+                    <th>Harga Satuan</th><th>Total</th>
+                  </tr>
+                </thead>
+                <tbody>${rowsHTML}</tbody>
+              </table>
+              <div class="vendor-mini-summary">
+                <div class="vendor-mini-summary-items">${satuanSummary}</div>
+                <div class="vendor-mini-summary-total">Grand Total: ${utils.formatCurrency(grandTotal)}</div>
+              </div>
+            </div>`;
+          container.appendChild(group);
+        });
+
+        this.updateSummary();
       }
     };
+
+    function toggleVendorGroup(btn) {
+      btn.classList.toggle('is-open');
+      btn.nextElementSibling.classList.toggle('is-open');
+    }
 
     // Export Functions
     const exporter = {
@@ -784,6 +904,42 @@ const API_BASE_URL = '/api';
         wsData.push(['FILTER YANG DITERAPKAN:']);
         this.buildFilterInfo().forEach(([label, value]) => wsData.push([`${label}: ${value}`]));
         wsData.push([]);
+
+        if (tipe === 'vendor') {
+          const groups = {};
+          state.currentData.forEach(row => {
+            const v = row.nama_vendor || '(Tanpa Vendor)';
+            if (!groups[v]) groups[v] = [];
+            groups[v].push(row);
+          });
+          let overallQty = 0, overallTotal = 0;
+          Object.keys(groups).sort().forEach(vendorName => {
+            const rows = groups[vendorName];
+            wsData.push([`VENDOR: ${vendorName}`]);
+            wsData.push(['No', 'Tanggal', 'No Seri', 'Nama Barang', 'Jumlah', 'Satuan', 'Harga Satuan', 'Total']);
+            let vQty = 0, vTotal = 0;
+            rows.forEach((row, idx) => {
+              const qty = utils.parseQty(row.jumlah);
+              const price = parseInt(row.harga) || 0;
+              const total = qty * price;
+              vQty += qty; vTotal += total;
+              wsData.push([idx+1, utils.formatDate(row.tanggal), row.no_seri||'-', row.nama_sparepart||row.nama_barang||'', qty, row.satuan||'', price, total]);
+            });
+            overallQty += vQty; overallTotal += vTotal;
+            wsData.push(['', '', '', 'Subtotal:', vQty, '', '', `Rp ${vTotal.toLocaleString('id-ID')}`]);
+            wsData.push([]);
+          });
+          wsData.push(['RINGKASAN KESELURUHAN:']);
+          wsData.push([`Total Item: ${overallQty}`, '', '', '', '', '', '', `Grand Total: Rp ${overallTotal.toLocaleString('id-ID')}`]);
+
+          const ws = XLSX.utils.aoa_to_sheet(wsData);
+          ws['!cols'] = [{wch:5},{wch:12},{wch:15},{wch:30},{wch:8},{wch:8},{wch:14},{wch:18}];
+          const wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws, 'Rekap');
+          XLSX.writeFile(wb, this.generateFileName('xlsx'));
+          return;
+        }
+
         wsData.push(CONFIG.headers[tipe]);
 
         state.currentData.forEach((row, idx) => {
@@ -795,8 +951,6 @@ const API_BASE_URL = '/api';
             wsData.push([idx+1, row.no_seri||'-', row.nama_sparepart||row.nama_barang, qty, price, total, row.nama_vendor||'-', utils.formatDate(row.tanggal)]);
           } else if (tipe === 'kendaraan') {
             wsData.push([idx+1, utils.formatDate(row.tanggal), row.kendaraan||'-', row.nama_sparepart||row.nama_barang, qty, row.satuan, price, total, row.nama_vendor||'-', row.penanggung_jawab||'-', (row.nama_sparepart||'').startsWith('Ban ') ? (row.keterangan||'-') : (row.no_seri||'-')]);
-          } else if (tipe === 'vendor') {
-            wsData.push([idx+1, utils.formatDate(row.tanggal), row.nama_vendor||'-', row.no_seri||'-', row.nama_sparepart||row.nama_barang, qty, row.satuan, price, total]);
           } else if (tipe === 'pemakaian_vendor') {
             wsData.push([idx+1, utils.formatDate(row.tanggal_masuk), row.no_seri||'-', row.nama_sparepart||row.nama_barang, qty, row.satuan, price, total, row.nama_vendor||'-', row.kendaraan||'-', utils.formatDate(row.tanggal_pemakaian)]);
           } else if (tipe === 'sisa_stok') {
@@ -877,6 +1031,66 @@ const API_BASE_URL = '/api';
           yPos += 5;
         });
 
+        if (tipe === 'vendor') {
+          const groups = {};
+          state.currentData.forEach(row => {
+            const v = row.nama_vendor || '(Tanpa Vendor)';
+            if (!groups[v]) groups[v] = [];
+            groups[v].push(row);
+          });
+          const vendorHead = [['No', 'Tanggal', 'No Seri', 'Nama Barang', 'Jumlah', 'Satuan', 'Harga Satuan', 'Total']];
+          let curY = yPos + 8;
+          let overallQty = 0, overallTotal = 0;
+
+          Object.keys(groups).sort().forEach(vendorName => {
+            const rows = groups[vendorName];
+            let vQty = 0, vTotal = 0;
+            const vendorBody = rows.map((row, idx) => {
+              const qty = utils.parseQty(row.jumlah);
+              const price = parseInt(row.harga) || 0;
+              const total = qty * price;
+              vQty += qty; vTotal += total;
+              return [idx+1, utils.formatDate(row.tanggal), row.no_seri||'-', row.nama_sparepart||row.nama_barang||'', qty, row.satuan||'', utils.formatCurrency(price), utils.formatCurrency(total)];
+            });
+            overallQty += vQty; overallTotal += vTotal;
+            vendorBody.push(['', '', '', 'Subtotal:', vQty, '', '', utils.formatCurrency(vTotal)]);
+
+            if (curY > 175) { doc.addPage(); curY = 20; }
+            doc.setFontSize(9); doc.setFont(undefined, 'bold');
+            doc.setTextColor(52, 58, 64);
+            doc.text(`VENDOR: ${vendorName}`, 14, curY);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont(undefined, 'normal');
+            curY += 4;
+
+            doc.autoTable({
+              head: vendorHead,
+              body: vendorBody,
+              startY: curY,
+              styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak', textColor: 0 },
+              headStyles: { fillColor: [52, 58, 64], textColor: 255, fontStyle: 'bold', fontSize: 7 },
+              alternateRowStyles: { fillColor: [245, 245, 245] },
+              didParseCell: (data) => {
+                if (data.section === 'body' && data.row.index === vendorBody.length - 1) {
+                  data.cell.styles.fontStyle = 'bold';
+                  data.cell.styles.fillColor = [230, 230, 230];
+                }
+              },
+              margin: { left: 14, right: 14 }
+            });
+            curY = doc.lastAutoTable.finalY + 8;
+          });
+
+          if (curY + 20 > 200) { doc.addPage(); curY = 20; }
+          doc.setFontSize(10); doc.setFont(undefined, 'bold');
+          doc.text('RINGKASAN KESELURUHAN:', 14, curY);
+          doc.setFont(undefined, 'normal'); doc.setFontSize(9);
+          doc.text(`Total Item: ${overallQty}`, 14, curY + 6);
+          doc.text(`Grand Total: ${utils.formatCurrency(overallTotal)}`, 160, curY + 6);
+          doc.save(this.generateFileName('pdf'));
+          return;
+        }
+
         const tableData = state.currentData.map((row, idx) => {
           const qty = utils.parseQty(row.jumlah);
           const price = parseInt(row.harga) || 0;
@@ -886,8 +1100,6 @@ const API_BASE_URL = '/api';
             return [idx+1, row.no_seri||'-', row.nama_sparepart||row.nama_barang, qty, utils.formatCurrency(price), utils.formatCurrency(total), row.nama_vendor||'-', utils.formatDate(row.tanggal)];
           } else if (tipe === 'kendaraan') {
             return [idx+1, utils.formatDate(row.tanggal), row.kendaraan||'-', row.nama_sparepart||row.nama_barang, qty, row.satuan, utils.formatCurrency(price), utils.formatCurrency(total), row.nama_vendor||'-', row.penanggung_jawab||'-', (row.nama_sparepart||'').startsWith('Ban ') ? (row.keterangan||'-') : (row.no_seri||'-')];
-          } else if (tipe === 'vendor') {
-            return [idx+1, utils.formatDate(row.tanggal), row.nama_vendor||'-', row.no_seri||'-', row.nama_sparepart||row.nama_barang, qty, row.satuan, utils.formatCurrency(price), utils.formatCurrency(total)];
           } else if (tipe === 'pemakaian_vendor') {
             return [idx+1, utils.formatDate(row.tanggal_masuk), row.no_seri||'-', row.nama_sparepart||row.nama_barang, qty, row.satuan, utils.formatCurrency(price), utils.formatCurrency(total), row.nama_vendor||'-', row.kendaraan||'-', utils.formatDate(row.tanggal_pemakaian)];
           } else if (tipe === 'sisa_stok') {
@@ -904,7 +1116,6 @@ const API_BASE_URL = '/api';
           styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak', textColor: 0, fontStyle: 'normal' },
           headStyles: { fillColor: [52, 58, 64], textColor: 255, fontStyle: 'bold', fontSize: 7 },
           alternateRowStyles: { fillColor: [245, 245, 245] },
-          // Warnai kolom Sisa Stok untuk sisa_stok
           didParseCell: tipe === 'sisa_stok' ? (data) => {
             if (data.section === 'body' && data.column.index === 9) {
               const val = parseFloat(data.cell.raw);

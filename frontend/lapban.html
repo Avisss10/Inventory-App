@@ -28,6 +28,7 @@
             <option value="ban_masuk">Ban Masuk</option>
             <option value="data_kendaraan">Data Kendaraan</option>
             <option value="pemakaian_per_masuk">Pemakaian Ban per Masuk</option>
+            <option value="vendor">Vendor</option>
           </select>
         </div>
         <div class="filter-group" id="filterTypeGroup">
@@ -94,6 +95,23 @@
         <div class="button-group">
           <button type="submit">Terapkan Filter</button>
           <button type="button" id="resetFilterDataKendaraan" class="btn-reset">Reset</button>
+        </div>
+      </div>
+
+      <!-- Filter for Vendor Report -->
+      <div class="filter-row" id="filterRowVendor" style="display: none;">
+        <div class="filter-group wide">
+          <label>Vendor:</label>
+          <input type="text" id="vendorFilterVendor" placeholder="Ketik untuk mencari Vendor..." list="vendorListVendor">
+          <datalist id="vendorListVendor"></datalist>
+        </div>
+        <div class="filter-group wide">
+          <label>Merk Ban:</label>
+          <input type="text" id="merkBanFilterVendor" placeholder="Ketik merk ban...">
+        </div>
+        <div class="button-group">
+          <button type="submit">Terapkan Filter</button>
+          <button type="button" id="resetFilterVendor" class="btn-reset">Reset</button>
         </div>
       </div>
 
@@ -165,7 +183,7 @@
   </div>
 
   <!-- Table Section -->
-  <div class="table-container">
+  <div class="table-container" id="tableContainer">
     <table id="rekapTable">
       <!-- Header for Penukaran Report -->
       <thead id="tableHeaderPenukaran">
@@ -245,6 +263,8 @@
       </tbody>
     </table>
   </div>
+
+  <div id="vendorAccordion" class="vendor-accordion-container" style="display:none;"></div>
 
   <!-- Summary Section -->
   <div class="summary-container">

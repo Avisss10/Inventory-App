@@ -23,10 +23,11 @@
             <option value="oli_tersedia">Literan Tersedia (Stok)</option>
             <option value="pemakaian_oli">Pemakaian Literan</option>
             <option value="pemakaian_per_bon">Pemakaian Per Bon</option>
+            <option value="vendor">Vendor</option>
           </select>
         </div>
 
-        <div class="filter-group filter-oli_masuk filter-oli_tersedia filter-pemakaian_oli" id="filterWaktuGroup">
+        <div class="filter-group filter-oli_masuk filter-oli_tersedia filter-pemakaian_oli filter-vendor" id="filterWaktuGroup">
           <label>Filter Waktu:</label>
           <select id="filterType">
             <option value="hari">Hari Ini</option>
@@ -78,30 +79,30 @@
           <input type="date" id="filterPemakaianEnd">
         </div>
 
-        <div class="filter-group narrow filter-oli_masuk filter-pemakaian_oli filter-hidden" id="filterStartGroup">
+        <div class="filter-group narrow filter-oli_masuk filter-pemakaian_oli filter-vendor filter-hidden" id="filterStartGroup">
           <label>Dari:</label>
           <input type="date" id="filterStart">
         </div>
 
-        <div class="filter-group narrow filter-oli_masuk filter-pemakaian_oli filter-hidden" id="filterEndGroup">
+        <div class="filter-group narrow filter-oli_masuk filter-pemakaian_oli filter-vendor filter-hidden" id="filterEndGroup">
           <label>Sampai:</label>
           <input type="date" id="filterEnd">
         </div>
       </div>
       
       <div class="filter-row">
-        <div class="filter-group wide filter-oli_masuk filter-oli_tersedia filter-pemakaian_oli filter-pemakaian_per_bon">
+        <div class="filter-group wide filter-oli_masuk filter-oli_tersedia filter-pemakaian_oli filter-pemakaian_per_bon filter-vendor">
           <label>Nama Literan:</label>
           <input type="text" id="namaOliFilter" placeholder="Ketik untuk mencari Literan..." list="oliList">
           <datalist id="oliList"></datalist>
         </div>
 
-        <div class="filter-group wide filter-oli_masuk filter-oli_tersedia filter-pemakaian_oli filter-pemakaian_per_bon">
+        <div class="filter-group wide filter-oli_masuk filter-oli_tersedia filter-pemakaian_oli filter-pemakaian_per_bon filter-vendor">
           <label>No Seri:</label>
           <input type="text" id="noSeriFilter" placeholder="Ketik untuk mencari No Seri...">
         </div>
 
-        <div class="filter-group wide filter-oli_masuk filter-oli_tersedia filter-pemakaian_oli filter-pemakaian_per_bon">
+        <div class="filter-group wide filter-oli_masuk filter-oli_tersedia filter-pemakaian_oli filter-pemakaian_per_bon filter-vendor">
           <label>Vendor:</label>
           <input type="text" id="vendorFilter" placeholder="Ketik untuk mencari Vendor..." list="vendorList">
           <datalist id="vendorList"></datalist>
@@ -129,7 +130,7 @@
     </div>
   </div>
 
-  <div class="table-container">
+  <div class="table-container" id="tableContainer">
     <table id="rekapTable">
       <thead id="tableHead">
         <tr>
@@ -150,6 +151,8 @@
       </tbody>
     </table>
   </div>
+
+  <div id="vendorAccordion" class="vendor-accordion-container" style="display:none;"></div>
 
   <div class="summary-container">
     <div id="summary">

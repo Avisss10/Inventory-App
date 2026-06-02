@@ -281,3 +281,56 @@
         padding: 8px 5px;
       }
     }
+
+/* ── Vendor Accordion ── */
+.vendor-accordion-container { margin: 0; }
+.vendor-group {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+  margin-bottom: 10px;
+  overflow: hidden;
+  border: 1px solid #dee2e6;
+}
+.vendor-group-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background: #fff;
+  color: #343a40;
+  border: none;
+  border-bottom: 2px solid #dee2e6;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: inherit;
+  text-align: left;
+  transition: background 0.15s;
+}
+.vendor-group-header:hover { background: #f8f9fa; }
+.vendor-group-header.is-open { background: #f0f7ff; border-bottom-color: #007bff; }
+.vendor-header-left { display: flex; align-items: center; gap: 12px; }
+.vendor-toggle-icon { font-size: 10px; transition: transform 0.2s; display: inline-block; width: 14px; }
+.vendor-group-header.is-open .vendor-toggle-icon { transform: rotate(90deg); }
+.vendor-name { font-weight: 700; font-size: 14px; }
+.vendor-item-count { background: rgba(0,0,0,0.07); padding: 2px 9px; border-radius: 12px; font-size: 11px; color: #495057; }
+.vendor-total-badge { font-weight: 700; font-size: 14px; color: #28a745; white-space: nowrap; }
+.vendor-group-body { display: none; }
+.vendor-group-body.is-open { display: block; }
+.vendor-detail-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.vendor-detail-table th {
+  background: #f8f9fa; padding: 8px 10px; text-align: center;
+  font-weight: 600; border-bottom: 2px solid #dee2e6; color: #495057;
+  white-space: nowrap; font-size: 12px;
+}
+.vendor-detail-table td { padding: 7px 10px; border-bottom: 1px solid #f0f0f0; text-align: center; }
+.vendor-detail-table tbody tr:last-child td { border-bottom: none; }
+.vendor-detail-table tbody tr:hover { background: #f8f9fa; }
+.vendor-mini-summary {
+  padding: 11px 20px; background: #e8f4ff; border-top: 2px solid #dee2e6;
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 13px; gap: 10px; flex-wrap: wrap;
+}
+.vendor-mini-summary-items { color: #495057; }
+.vendor-mini-summary-total { font-weight: 700; font-size: 14px; color: #0056b3; }

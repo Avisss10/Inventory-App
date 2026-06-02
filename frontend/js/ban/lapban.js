@@ -15,35 +15,27 @@
       try {
         const res = await fetch("/api/vendor");
         const vendors = await res.json();
-        
-        // Populate datalists untuk semua vendor filter
+
         const vendorList1 = document.getElementById("vendorList");
         const vendorList2 = document.getElementById("vendorListStok");
         const vendorList3 = document.getElementById("vendorListPemakaianPerMasuk");
-        
+        const vendorList4 = document.getElementById("vendorListVendor");
+
         vendorList1.innerHTML = '';
         vendorList2.innerHTML = '';
         vendorList3.innerHTML = '';
-        
+        if (vendorList4) vendorList4.innerHTML = '';
+
         vendors.forEach(v => {
-          // Simpan mapping
           vendorNameToId[v.nama_vendor] = v.id;
           vendorMap[v.id] = v.nama_vendor;
-          
-          // Tambahkan ke datalist 1
-          const option1 = document.createElement("option");
-          option1.value = v.nama_vendor;
-          vendorList1.appendChild(option1);
-          
-          // Tambahkan ke datalist 2
-          const option2 = document.createElement("option");
-          option2.value = v.nama_vendor;
-          vendorList2.appendChild(option2);
-          
-          // Tambahkan ke datalist 3
-          const option3 = document.createElement("option");
-          option3.value = v.nama_vendor;
-          vendorList3.appendChild(option3);
+
+          [vendorList1, vendorList2, vendorList3, vendorList4].forEach(list => {
+            if (!list) return;
+            const opt = document.createElement("option");
+            opt.value = v.nama_vendor;
+            list.appendChild(opt);
+          });
         });
       } catch (error) {
         console.error("Error loading vendors:", error);
@@ -86,16 +78,35 @@
       if (reportType === 'stok' || reportType === 'ban_masuk') return 8;
       if (reportType === 'data_kendaraan') return 14;
       if (reportType === 'pemakaian_per_masuk') return 9;
+      if (reportType === 'vendor') return 8;
       return 16;
     }
 
     function showLoading(reportType) {
+      if (reportType === 'vendor') {
+        document.getElementById('tableContainer').style.display = 'none';
+        const acc = document.getElementById('vendorAccordion');
+        acc.style.display = 'block';
+        acc.innerHTML = '<div style="text-align:center;padding:40px;color:#6c757d;font-size:14px;">Memuat data...</div>';
+        return;
+      }
+      document.getElementById('tableContainer').style.display = '';
+      document.getElementById('vendorAccordion').style.display = 'none';
       const tbody = document.querySelector("#rekapTable tbody");
       const colSpan = getColSpan(reportType);
       tbody.innerHTML = `<tr><td colspan="${colSpan}" class="loading">Memuat data...</td></tr>`;
     }
 
     function showEmpty(reportType, message = "Tidak ada data yang ditemukan") {
+      if (reportType === 'vendor') {
+        document.getElementById('tableContainer').style.display = 'none';
+        const acc = document.getElementById('vendorAccordion');
+        acc.style.display = 'block';
+        acc.innerHTML = `<div style="text-align:center;padding:40px;color:#6c757d;font-size:14px;">${message}</div>`;
+        return;
+      }
+      document.getElementById('tableContainer').style.display = '';
+      document.getElementById('vendorAccordion').style.display = 'none';
       const tbody = document.querySelector("#rekapTable tbody");
       const colSpan = getColSpan(reportType);
       tbody.innerHTML = `<tr><td colspan="${colSpan}" class="empty-state">${message}</td></tr>`;
@@ -374,6 +385,8 @@
           await applyFilterDataKendaraan();
         } else if (reportType === 'pemakaian_per_masuk') {
           await applyFilterPemakaianPerMasuk();
+        } else if (reportType === 'vendor') {
+          await applyFilterVendor();
         } else {
           await applyFilterStok(reportType);
         }
@@ -551,7 +564,137 @@ async function applyFilterDataKendaraan() {
       const data = await res.json();
       renderTablePemakaianPerMasuk(data);
     }
-// ============================================
+    async function applyFilterVendor() {
+      const filterType = document.getElementById("filterType").value;
+      let startDate = document.getElementById("filterStart").value;
+      let endDate = document.getElementById("filterEnd").value;
+
+      if (filterType === 'manual' && (!startDate || !endDate)) {
+        alert("Harap isi tanggal mulai dan selesai untuk filter manual!");
+        showEmpty('vendor', "Silakan isi tanggal terlebih dahulu");
+        return;
+      }
+
+      const dateRange = getDateRange(filterType, startDate, endDate);
+      startDate = dateRange.startDate;
+      endDate = dateRange.endDate;
+
+      const vendorNama = document.getElementById("vendorFilterVendor").value.trim();
+      const vendorId = vendorNama ? vendorNameToId[vendorNama] : '';
+      const merkBan = document.getElementById("merkBanFilterVendor").value.trim();
+
+      currentFilter = {
+        startDate,
+        endDate,
+        vendor: vendorId,
+        vendorNama,
+        merkBan,
+        filterType,
+        reportType: 'vendor'
+      };
+
+      const res = await fetch(`/api/ban_masuk?start=${startDate}&end=${endDate}&vendor=${vendorId}&merkBan=${merkBan}`);
+      const data = await res.json();
+      renderVendorAccordionBan(data);
+    }
+
+    function renderVendorAccordionBan(data) {
+      currentData = data;
+      document.getElementById('tableContainer').style.display = 'none';
+      const container = document.getElementById('vendorAccordion');
+      container.style.display = 'block';
+      container.innerHTML = '';
+
+      if (!data || !data.length) {
+        container.innerHTML = '<div style="text-align:center;padding:40px;color:#6c757d;font-size:14px;">Tidak ada data vendor ditemukan</div>';
+        document.getElementById("summary").innerHTML = '<strong>Total Ban:</strong> 0<br><strong>Grand Total:</strong> Rp 0';
+        return;
+      }
+
+      const groups = {};
+      data.forEach(row => {
+        const vendor = row.nama_vendor || '(Tanpa Vendor)';
+        if (!groups[vendor]) groups[vendor] = [];
+        groups[vendor].push(row);
+      });
+
+      let overallTotal = 0;
+      let overallBan = 0;
+
+      Object.keys(groups).sort().forEach(vendorName => {
+        const rows = groups[vendorName];
+        let grandTotal = 0;
+        let totalBan = 0;
+
+        rows.forEach(row => {
+          const jumlah = parseInt(row.jumlah) || 0;
+          const harga = parseInt(row.harga) || 0;
+          grandTotal += harga * jumlah;
+          totalBan += jumlah;
+        });
+
+        overallTotal += grandTotal;
+        overallBan += totalBan;
+
+        const rowsHTML = rows.map((row, idx) => {
+          const jumlah = parseInt(row.jumlah) || 0;
+          const harga = parseInt(row.harga) || 0;
+          const total = harga * jumlah;
+          return `<tr>
+            <td>${idx + 1}</td>
+            <td>${formatDate(row.tgl_ban_masuk)}</td>
+            <td style="text-align:left;">${row.merk_ban || '-'}</td>
+            <td>${row.no_seri || '-'}</td>
+            <td>${jumlah}</td>
+            <td>${row.satuan || 'Unit'}</td>
+            <td style="text-align:right;">${formatCurrency(harga)}</td>
+            <td style="text-align:right;">${formatCurrency(total)}</td>
+          </tr>`;
+        }).join('');
+
+        const group = document.createElement('div');
+        group.className = 'vendor-group';
+        group.innerHTML = `
+          <button type="button" class="vendor-group-header" onclick="toggleVendorGroup(this)">
+            <div class="vendor-header-left">
+              <span class="vendor-toggle-icon">▶</span>
+              <span class="vendor-name">${vendorName}</span>
+              <span class="vendor-item-count">${rows.length} item &nbsp;|&nbsp; ${totalBan} ban</span>
+            </div>
+            <div class="vendor-total-badge">Total: ${formatCurrency(grandTotal)}</div>
+          </button>
+          <div class="vendor-group-body">
+            <table class="vendor-detail-table">
+              <thead>
+                <tr>
+                  <th>No</th><th>Tgl Masuk</th><th>Merk Ban</th>
+                  <th>No Seri</th><th>Jumlah</th><th>Satuan</th><th>Harga</th><th>Total</th>
+                </tr>
+              </thead>
+              <tbody>${rowsHTML}</tbody>
+            </table>
+            <div class="vendor-mini-summary">
+              <div class="vendor-mini-summary-items">Total Ban: <strong>${totalBan}</strong></div>
+              <div class="vendor-mini-summary-total">Grand Total: ${formatCurrency(grandTotal)}</div>
+            </div>
+          </div>`;
+        container.appendChild(group);
+      });
+
+      currentFilter.totalBan = overallBan;
+      currentFilter.grandTotal = overallTotal;
+      document.getElementById("summary").innerHTML = `
+        <strong>Total Ban (Keseluruhan):</strong> ${overallBan}<br>
+        <strong>Grand Total:</strong> ${formatCurrency(overallTotal)}
+      `;
+    }
+
+    function toggleVendorGroup(btn) {
+      btn.classList.toggle('is-open');
+      btn.nextElementSibling.classList.toggle('is-open');
+    }
+
+    // ============================================
     // EXPORT FUNCTIONS (UPDATED)
     // ============================================
     
@@ -599,6 +742,15 @@ async function applyFilterDataKendaraan() {
           }
           if (currentFilter.merkBan) {
             filters.push(['Merk Ban', currentFilter.merkBan]);
+          }
+        } else if (reportType === 'vendor') {
+          if (currentFilter.vendorNama) filters.push(['Vendor', currentFilter.vendorNama]);
+          if (currentFilter.merkBan) filters.push(['Merk Ban', currentFilter.merkBan]);
+          if (currentFilter.startDate && currentFilter.endDate) {
+            filters.push(['Periode', getFilterLabel(currentFilter.filterType)]);
+            filters.push(['Tanggal', currentFilter.startDate === currentFilter.endDate
+              ? currentFilter.startDate
+              : `${currentFilter.startDate} s/d ${currentFilter.endDate}`]);
           }
         } else if (reportType === 'pemakaian_per_masuk') {
           if (currentFilter.vendorNama) {
@@ -676,6 +828,14 @@ async function applyFilterDataKendaraan() {
           if (currentFilter.merkBan) {
             parts.push(currentFilter.merkBan.replace(/\s+/g, '_'));
           }
+        } else if (reportType === 'vendor') {
+          parts.push('VendorBan');
+          if (currentFilter.vendorNama) parts.push(currentFilter.vendorNama.replace(/\s+/g, '_'));
+          if (currentFilter.merkBan) parts.push(currentFilter.merkBan.replace(/\s+/g, '_'));
+          if (currentFilter.startDate && currentFilter.endDate) {
+            parts.push(currentFilter.startDate === currentFilter.endDate
+              ? currentFilter.startDate : `${currentFilter.startDate}_sd_${currentFilter.endDate}`);
+          }
         } else if (reportType === 'pemakaian_per_masuk') {
           parts.push('PemakaianBanPerMasuk');
           if (currentFilter.vendorNama) {
@@ -720,7 +880,7 @@ async function applyFilterDataKendaraan() {
 
       const reportType = currentFilter.reportType;
       const wsData = [];
-      
+
       // Title
       let title = '';
       if (reportType === 'penukaran') {
@@ -731,6 +891,8 @@ async function applyFilterDataKendaraan() {
         title = 'REKAP DATA BAN MASUK';
       } else if (reportType === 'pemakaian_per_masuk') {
         title = 'REKAP PEMAKAIAN BAN PER MASUK';
+      } else if (reportType === 'vendor') {
+        title = 'REKAP VENDOR BAN';
       } else {
         title = 'REKAP DATA STOK BAN (BELUM DIPAKAI)';
       }
@@ -746,7 +908,43 @@ async function applyFilterDataKendaraan() {
       });
       
       wsData.push([]);
-      
+
+      // Vendor: grouped export (early return)
+      if (reportType === 'vendor') {
+        const groups = {};
+        currentData.forEach(row => {
+          const v = row.nama_vendor || '(Tanpa Vendor)';
+          if (!groups[v]) groups[v] = [];
+          groups[v].push(row);
+        });
+        let overallBan = 0, overallTotal = 0;
+        Object.keys(groups).sort().forEach(vendorName => {
+          const rows = groups[vendorName];
+          wsData.push([`VENDOR: ${vendorName}`]);
+          wsData.push(['No', 'Tgl Masuk', 'Merk Ban', 'No Seri', 'Jumlah', 'Satuan', 'Harga', 'Total']);
+          let vBan = 0, vTotal = 0;
+          rows.forEach((row, idx) => {
+            const jumlah = parseInt(row.jumlah) || 0;
+            const harga = parseInt(row.harga) || 0;
+            const total = harga * jumlah;
+            vBan += jumlah; vTotal += total;
+            wsData.push([idx+1, formatDate(row.tgl_ban_masuk), row.merk_ban||'-', row.no_seri||'-', jumlah, row.satuan||'Unit', harga, total]);
+          });
+          overallBan += vBan; overallTotal += vTotal;
+          wsData.push(['', '', 'Subtotal:', '', vBan, '', '', `Rp ${vTotal.toLocaleString('id-ID')}`]);
+          wsData.push([]);
+        });
+        wsData.push(['RINGKASAN KESELURUHAN:']);
+        wsData.push([`Total Ban: ${overallBan}`, '', '', '', '', '', '', `Grand Total: Rp ${overallTotal.toLocaleString('id-ID')}`]);
+
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        ws['!cols'] = [{wch:5},{wch:14},{wch:18},{wch:16},{wch:8},{wch:8},{wch:14},{wch:18}];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Rekap Ban');
+        XLSX.writeFile(wb, exportHelper.generateFileName('xlsx'));
+        return;
+      }
+
       // Headers and Data
       if (reportType === 'penukaran') {
         wsData.push([
@@ -927,6 +1125,8 @@ async function applyFilterDataKendaraan() {
         title = 'REKAP DATA BAN MASUK';
       } else if (reportType === 'pemakaian_per_masuk') {
         title = 'REKAP PEMAKAIAN BAN PER MASUK';
+      } else if (reportType === 'vendor') {
+        title = 'REKAP VENDOR BAN';
       } else {
         title = 'REKAP DATA STOK BAN (BELUM DIPAKAI)';
       }
@@ -957,6 +1157,64 @@ async function applyFilterDataKendaraan() {
         }
         yPos += 5;
       });
+
+      // Vendor: grouped PDF (early return)
+      if (reportType === 'vendor') {
+        const groups = {};
+        currentData.forEach(row => {
+          const v = row.nama_vendor || '(Tanpa Vendor)';
+          if (!groups[v]) groups[v] = [];
+          groups[v].push(row);
+        });
+        const vHead = [['No', 'Tgl Masuk', 'Merk Ban', 'No Seri', 'Jumlah', 'Satuan', 'Harga', 'Total']];
+        let curY = yPos + 5;
+        let overallBan = 0, overallTotal = 0;
+
+        Object.keys(groups).sort().forEach(vendorName => {
+          const rows = groups[vendorName];
+          let vBan = 0, vTotal = 0;
+          const vBody = rows.map((row, idx) => {
+            const jumlah = parseInt(row.jumlah) || 0;
+            const harga = parseInt(row.harga) || 0;
+            const total = harga * jumlah;
+            vBan += jumlah; vTotal += total;
+            return [idx+1, formatDate(row.tgl_ban_masuk), row.merk_ban||'-', row.no_seri||'-', jumlah, row.satuan||'Unit', formatCurrency(harga), formatCurrency(total)];
+          });
+          overallBan += vBan; overallTotal += vTotal;
+          vBody.push(['', '', 'Subtotal:', '', vBan, '', '', formatCurrency(vTotal)]);
+
+          if (curY > 175) { doc.addPage(); curY = 20; }
+          doc.setFontSize(9); doc.setFont(undefined, 'bold');
+          doc.setTextColor(52, 58, 64);
+          doc.text(`VENDOR: ${vendorName}`, 14, curY);
+          doc.setTextColor(0, 0, 0); doc.setFont(undefined, 'normal');
+          curY += 4;
+
+          doc.autoTable({
+            head: vHead, body: vBody, startY: curY,
+            styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak', textColor: 0 },
+            headStyles: { fillColor: [52, 58, 64], textColor: 255, fontStyle: 'bold', fontSize: 7 },
+            alternateRowStyles: { fillColor: [245, 245, 245] },
+            didParseCell: (data) => {
+              if (data.section === 'body' && data.row.index === vBody.length - 1) {
+                data.cell.styles.fontStyle = 'bold';
+                data.cell.styles.fillColor = [230, 230, 230];
+              }
+            },
+            margin: { left: 14, right: 14 }
+          });
+          curY = doc.lastAutoTable.finalY + 8;
+        });
+
+        if (curY + 15 > 200) { doc.addPage(); curY = 20; }
+        doc.setFontSize(10); doc.setFont(undefined, 'bold');
+        doc.text('RINGKASAN KESELURUHAN:', 14, curY);
+        doc.setFont(undefined, 'normal'); doc.setFontSize(9);
+        doc.text(`Total Ban: ${overallBan}`, 14, curY + 6);
+        doc.text(`Grand Total: ${formatCurrency(overallTotal)}`, 160, curY + 6);
+        doc.save(exportHelper.generateFileName('pdf'));
+        return;
+      }
 
       // Table data
       let tableHead = [];
@@ -1144,28 +1402,29 @@ async function applyFilterDataKendaraan() {
       const endDateGroup = document.getElementById('filterEndGroup');
 
       // Show/Hide Filter Rows
-      document.getElementById('filterRowPenukaran').style.display = 
+      document.getElementById('filterRowPenukaran').style.display =
         reportType === 'penukaran' ? 'flex' : 'none';
-      document.getElementById('filterRowStok').style.display = 
+      document.getElementById('filterRowStok').style.display =
         (reportType === 'stok' || reportType === 'ban_masuk') ? 'flex' : 'none';
-      document.getElementById('filterRowDataKendaraan').style.display = 
+      document.getElementById('filterRowDataKendaraan').style.display =
         reportType === 'data_kendaraan' ? 'flex' : 'none';
-      document.getElementById('filterRowPemakaianPerMasuk').style.display = 
+      document.getElementById('filterRowPemakaianPerMasuk').style.display =
         reportType === 'pemakaian_per_masuk' ? 'flex' : 'none';
+      document.getElementById('filterRowVendor').style.display =
+        reportType === 'vendor' ? 'flex' : 'none';
 
       // Show/Hide Table Headers
-      document.getElementById('tableHeaderPenukaran').style.display = 
+      document.getElementById('tableHeaderPenukaran').style.display =
         reportType === 'penukaran' ? '' : 'none';
-      document.getElementById('tableHeaderDataKendaraan').style.display = 
+      document.getElementById('tableHeaderDataKendaraan').style.display =
         reportType === 'data_kendaraan' ? '' : 'none';
-      document.getElementById('tableHeaderStok').style.display = 
+      document.getElementById('tableHeaderStok').style.display =
         (reportType === 'stok' || reportType === 'ban_masuk') ? '' : 'none';
-      document.getElementById('tableHeaderPemakaianPerMasuk').style.display = 
+      document.getElementById('tableHeaderPemakaianPerMasuk').style.display =
         reportType === 'pemakaian_per_masuk' ? '' : 'none';
 
       // Show/Hide Date Filters
       if (reportType === 'data_kendaraan' || reportType === 'stok' || reportType === 'pemakaian_per_masuk') {
-        // For pemakaian per masuk we use the dedicated Masuk/Pemakaian filters instead
         filterTypeGroup.style.display = 'none';
         startDateGroup.style.display = 'none';
         endDateGroup.style.display = 'none';
@@ -1263,6 +1522,13 @@ async function applyFilterDataKendaraan() {
       applyFilter();
     });
 
+    document.getElementById("resetFilterVendor").addEventListener("click", () => {
+      document.getElementById("vendorFilterVendor").value = "";
+      document.getElementById("merkBanFilterVendor").value = "";
+      resetDateFilters();
+      applyFilter();
+    });
+
     document.getElementById("resetFilterPemakaianPerMasuk").addEventListener("click", () => {
       document.getElementById("vendorFilterPemakaianPerMasuk").value = "";
       document.getElementById("merkBanFilterPemakaianPerMasuk").value = "";
@@ -1316,6 +1582,8 @@ async function applyFilterDataKendaraan() {
       document.getElementById("kendaraanFilterData").value = "";
       document.getElementById("vendorFilterPemakaianPerMasuk").value = "";
       document.getElementById("merkBanFilterPemakaianPerMasuk").value = "";
+      if (document.getElementById("vendorFilterVendor")) document.getElementById("vendorFilterVendor").value = "";
+      if (document.getElementById("merkBanFilterVendor")) document.getElementById("merkBanFilterVendor").value = "";
 
       // Reset Pemakaian Per Masuk specific filters
       if (document.getElementById('filterMasukTypePemakaian')) {

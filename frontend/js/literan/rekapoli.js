@@ -8,11 +8,12 @@ const CONFIG = {
     oli_masuk: 8,
     oli_tersedia: 14,
     pemakaian_oli: 10,
-    pemakaian_per_bon: 11
+    pemakaian_per_bon: 11,
+    vendor: 7
   },
   headers: {
     oli_masuk: [
-      'No', 'Tanggal', 'Nama Literan', 'No Seri', 
+      'No', 'Tanggal', 'Nama Literan', 'No Seri',
       'Jumlah Masuk (L)', 'Harga Satuan', 'Total', 'Vendor'
     ],
     oli_tersedia: [
@@ -27,13 +28,18 @@ const CONFIG = {
     pemakaian_per_bon: [
       'No', 'Tanggal Masuk', 'No Seri', 'Nama Literan', 'Vendor',
       'Kendaraan', 'Jumlah (L)', 'Harga Satuan', 'Total', 'Keterangan', 'Tanggal Pemakaian'
+    ],
+    vendor: [
+      'No', 'Tanggal Masuk', 'Nama Literan', 'No Seri',
+      'Jumlah (L)', 'Harga Satuan', 'Total'
     ]
   },
   titles: {
     oli_masuk: 'REKAP LITERAN MASUK (TANPA GABUNGAN)',
     oli_tersedia: 'REKAP LITERAN TERSEDIA (STOK)',
     pemakaian_oli: 'REKAP PEMAKAIAN LITERAN',
-    pemakaian_per_bon: 'REKAP PEMAKAIAN PER BON'
+    pemakaian_per_bon: 'REKAP PEMAKAIAN PER BON',
+    vendor: 'REKAP VENDOR LITERAN'
   },
   filterLabels: {
     hari: 'Hari Ini',
@@ -194,10 +200,10 @@ const api = {
 // ========================================
 const ui = {
   toggleFilters(tipe) {
-    $$('.filter-oli_masuk, .filter-oli_tersedia, .filter-pemakaian_oli').forEach(el => 
+    $$('.filter-oli_masuk, .filter-oli_tersedia, .filter-pemakaian_oli, .filter-vendor').forEach(el =>
       el.classList.add('filter-hidden')
     );
-    $$(`.filter-${tipe}`).forEach(el => 
+    $$(`.filter-${tipe}`).forEach(el =>
       el.classList.remove('filter-hidden')
     );
   },
@@ -209,12 +215,30 @@ const ui = {
   },
 
   showLoading(tipe) {
-    $('rekapTable').querySelector('tbody').innerHTML = 
+    if (tipe === 'vendor') {
+      document.getElementById('tableContainer').style.display = 'none';
+      const acc = $('vendorAccordion');
+      acc.style.display = 'block';
+      acc.innerHTML = '<div style="text-align:center;padding:40px;color:#6c757d;font-size:14px;">Memuat data...</div>';
+      return;
+    }
+    document.getElementById('tableContainer').style.display = '';
+    $('vendorAccordion').style.display = 'none';
+    $('rekapTable').querySelector('tbody').innerHTML =
       `<tr><td colspan="${CONFIG.columnCounts[tipe]}" class="loading">Memuat data...</td></tr>`;
   },
 
   showEmpty(tipe, msg = 'Tidak ada data yang ditemukan') {
-    $('rekapTable').querySelector('tbody').innerHTML = 
+    if (tipe === 'vendor') {
+      document.getElementById('tableContainer').style.display = 'none';
+      const acc = $('vendorAccordion');
+      acc.style.display = 'block';
+      acc.innerHTML = `<div style="text-align:center;padding:40px;color:#6c757d;font-size:14px;">${msg}</div>`;
+      return;
+    }
+    document.getElementById('tableContainer').style.display = '';
+    $('vendorAccordion').style.display = 'none';
+    $('rekapTable').querySelector('tbody').innerHTML =
       `<tr><td colspan="${CONFIG.columnCounts[tipe]}" class="empty-state">${msg}</td></tr>`;
   },
 
@@ -441,6 +465,37 @@ applyClientFilters(data) {
         url = `/rekap/pemakaian_per_bon?${params.toString()}`;
       }
 
+      if (tipe === 'vendor') {
+        const vendorNama = $('vendorFilter').value.trim();
+        const vendorId = vendorNama ? state.vendorNameToId[vendorNama] : '';
+        const namaOli = $('namaOliFilter').value || '';
+        const noSeri = $('noSeriFilter').value || '';
+
+        if (!dateRange.start || !dateRange.end) {
+          alert('Harap isi tanggal untuk filter!');
+          return;
+        }
+
+        if (vendorId) params.append('vendor', vendorId);
+        if (namaOli) params.append('nama_oli', namaOli);
+        if (noSeri) params.append('no_seri', noSeri);
+        params.append('start', dateRange.start);
+        params.append('end', dateRange.end);
+
+        state.currentFilter = {
+          vendor: vendorId,
+          vendorNama,
+          namaOli,
+          noSeri,
+          startDate: dateRange.start,
+          endDate: dateRange.end,
+          filterType,
+          tipe: 'vendor'
+        };
+
+        url = `/rekap/oli_masuk?${params.toString()}`;
+      }
+
       ui.showLoading(tipe);
       const data = await api.fetch(url);
       state.allData = data;
@@ -495,6 +550,15 @@ applyClientFilters(data) {
     let filtered = tipe === 'oli_tersedia' ? this.applyClientFilters(data) : data;
 
     state.currentData = filtered;
+
+    if (tipe === 'vendor') {
+      this.renderVendorAccordionOli(filtered);
+      return;
+    }
+
+    document.getElementById('tableContainer').style.display = '';
+    $('vendorAccordion').style.display = 'none';
+
     const tbody = $('rekapTable').querySelector('tbody');
     tbody.innerHTML = '';
 
@@ -635,12 +699,12 @@ applyClientFilters(data) {
     let totalCost = 0;
 
     state.currentData.forEach(row => {
-      if (tipe === 'oli_masuk') {
+      if (tipe === 'oli_masuk' || tipe === 'vendor') {
         const jumlah = utils.parseQty(row.jumlah_baru);
         const hargaSatuan = utils.parseQty(row.harga || 0);
         totalLiter += jumlah;
         totalCost += jumlah * hargaSatuan;
-      } 
+      }
       else if (tipe === 'oli_tersedia') {
         let sisaLama = utils.parseQty(row.sisa_lama || 0);
 
@@ -681,8 +745,91 @@ applyClientFilters(data) {
       <strong>Total Literan:</strong> ${utils.formatNumber(summary.totalLiter)} L<br>
       <strong>Grand Total:</strong> ${utils.formatCurrency(summary.totalCost)}
     `;
+  },
+
+  renderVendorAccordionOli(data) {
+    document.getElementById('tableContainer').style.display = 'none';
+    const container = $('vendorAccordion');
+    container.style.display = 'block';
+    container.innerHTML = '';
+
+    if (!data || !data.length) {
+      container.innerHTML = '<div style="text-align:center;padding:40px;color:#6c757d;font-size:14px;">Tidak ada data vendor ditemukan</div>';
+      this.updateSummary();
+      return;
+    }
+
+    const groups = {};
+    data.forEach(row => {
+      const vendor = row.nama_vendor || '(Tanpa Vendor)';
+      if (!groups[vendor]) groups[vendor] = [];
+      groups[vendor].push(row);
+    });
+
+    Object.keys(groups).sort().forEach(vendorName => {
+      const rows = groups[vendorName];
+      let grandTotal = 0;
+      let totalLiter = 0;
+
+      rows.forEach(row => {
+        const jumlah = utils.parseQty(row.jumlah_baru);
+        const harga = utils.parseQty(row.harga || 0);
+        grandTotal += jumlah * harga;
+        totalLiter += jumlah;
+      });
+
+      const rowsHTML = rows.map((row, idx) => {
+        const jumlah = utils.parseQty(row.jumlah_baru);
+        const harga = utils.parseQty(row.harga || 0);
+        const total = jumlah * harga;
+        return `<tr>
+          <td>${idx + 1}</td>
+          <td>${utils.formatDate(row.tanggal_masuk)}</td>
+          <td style="text-align:left;">${row.nama_oli || ''}</td>
+          <td>${row.no_seri || '-'}</td>
+          <td>${jumlah.toFixed(2)} L</td>
+          <td style="text-align:right;">${utils.formatCurrency(harga)}</td>
+          <td style="text-align:right;">${utils.formatCurrency(total)}</td>
+        </tr>`;
+      }).join('');
+
+      const group = document.createElement('div');
+      group.className = 'vendor-group';
+      group.innerHTML = `
+        <button type="button" class="vendor-group-header" onclick="toggleVendorGroup(this)">
+          <div class="vendor-header-left">
+            <span class="vendor-toggle-icon">▶</span>
+            <span class="vendor-name">${vendorName}</span>
+            <span class="vendor-item-count">${rows.length} item &nbsp;|&nbsp; ${utils.formatNumber(totalLiter)} L</span>
+          </div>
+          <div class="vendor-total-badge">Total: ${utils.formatCurrency(grandTotal)}</div>
+        </button>
+        <div class="vendor-group-body">
+          <table class="vendor-detail-table">
+            <thead>
+              <tr>
+                <th>No</th><th>Tanggal Masuk</th><th>Nama Literan</th>
+                <th>No Seri</th><th>Jumlah (L)</th><th>Harga Satuan</th><th>Total</th>
+              </tr>
+            </thead>
+            <tbody>${rowsHTML}</tbody>
+          </table>
+          <div class="vendor-mini-summary">
+            <div class="vendor-mini-summary-items">Total Literan: <strong>${utils.formatNumber(totalLiter)} L</strong></div>
+            <div class="vendor-mini-summary-total">Grand Total: ${utils.formatCurrency(grandTotal)}</div>
+          </div>
+        </div>`;
+      container.appendChild(group);
+    });
+
+    this.updateSummary();
   }
 };
+
+function toggleVendorGroup(btn) {
+  btn.classList.toggle('is-open');
+  btn.nextElementSibling.classList.toggle('is-open');
+}
 
 // ========================================
 // LOAD INITIAL DATA
@@ -744,7 +891,6 @@ async function loadInitialData(tipe) {
     }
     else if (tipe === 'pemakaian_per_bon') {
       const params = new URLSearchParams();
-      // Default to today's Masuk and Pemakaian ranges (hari)
       params.append('masuk_start', todayISO);
       params.append('masuk_end', todayISO);
 
@@ -761,6 +907,23 @@ async function loadInitialData(tipe) {
         pemakaianEnd: '',
         pemakaianFilterType: 'semua',
         tipe: 'pemakaian_per_bon'
+      };
+    }
+    else if (tipe === 'vendor') {
+      const params = new URLSearchParams();
+      params.append('start', todayISO);
+      params.append('end', todayISO);
+
+      url = `/rekap/oli_masuk?${params.toString()}`;
+      state.currentFilter = {
+        vendor: '',
+        vendorNama: '',
+        namaOli: '',
+        noSeri: '',
+        startDate: todayISO,
+        endDate: todayISO,
+        filterType: 'hari',
+        tipe: 'vendor'
       };
     }
 
@@ -927,6 +1090,42 @@ const exporter = {
         wsData.push([`${label}:`, value]);
       });
       wsData.push([]);
+    }
+
+    // ===== VENDOR: grouped export =====
+    if (tipe === 'vendor') {
+      const groups = {};
+      state.currentData.forEach(row => {
+        const v = row.nama_vendor || '(Tanpa Vendor)';
+        if (!groups[v]) groups[v] = [];
+        groups[v].push(row);
+      });
+      let overallLiter = 0, overallTotal = 0;
+      Object.keys(groups).sort().forEach(vendorName => {
+        const rows = groups[vendorName];
+        wsData.push([`VENDOR: ${vendorName}`]);
+        wsData.push(['No', 'Tanggal Masuk', 'Nama Literan', 'No Seri', 'Jumlah (L)', 'Harga Satuan', 'Total']);
+        let vLiter = 0, vTotal = 0;
+        rows.forEach((row, idx) => {
+          const jumlah = utils.parseQty(row.jumlah_baru);
+          const harga = utils.parseQty(row.harga || 0);
+          const total = jumlah * harga;
+          vLiter += jumlah; vTotal += total;
+          wsData.push([idx+1, utils.formatDate(row.tanggal_masuk), row.nama_oli||'', row.no_seri||'-', jumlah, harga, total]);
+        });
+        overallLiter += vLiter; overallTotal += vTotal;
+        wsData.push(['', '', 'Subtotal:', '', vLiter.toFixed(2), '', `Rp ${vTotal.toLocaleString('id-ID')}`]);
+        wsData.push([]);
+      });
+      wsData.push(['RINGKASAN KESELURUHAN:']);
+      wsData.push([`Total Literan: ${overallLiter.toFixed(2)} L`, '', '', '', '', '', `Grand Total: Rp ${overallTotal.toLocaleString('id-ID')}`]);
+
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      ws['!cols'] = [{wch:5},{wch:14},{wch:28},{wch:16},{wch:12},{wch:16},{wch:18}];
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Rekap Literan');
+      XLSX.writeFile(wb, this.generateFileName('xlsx'));
+      return;
     }
 
     // ===== HEADER TABEL =====
@@ -1164,6 +1363,64 @@ const exporter = {
         yPos += 5;
       });
       yPos += 3;
+    }
+
+    // ===== VENDOR: grouped PDF =====
+    if (tipe === 'vendor') {
+      const groups = {};
+      state.currentData.forEach(row => {
+        const v = row.nama_vendor || '(Tanpa Vendor)';
+        if (!groups[v]) groups[v] = [];
+        groups[v].push(row);
+      });
+      const vHead = [['No', 'Tanggal Masuk', 'Nama Literan', 'No Seri', 'Jumlah (L)', 'Harga Satuan', 'Total']];
+      let curY = yPos;
+      let overallLiter = 0, overallTotal = 0;
+
+      Object.keys(groups).sort().forEach(vendorName => {
+        const rows = groups[vendorName];
+        let vLiter = 0, vTotal = 0;
+        const vBody = rows.map((row, idx) => {
+          const jumlah = utils.parseQty(row.jumlah_baru);
+          const harga = utils.parseQty(row.harga || 0);
+          const total = jumlah * harga;
+          vLiter += jumlah; vTotal += total;
+          return [idx+1, utils.formatDate(row.tanggal_masuk), row.nama_oli||'', row.no_seri||'-', jumlah.toFixed(2), utils.formatCurrency(harga), utils.formatCurrency(total)];
+        });
+        overallLiter += vLiter; overallTotal += vTotal;
+        vBody.push(['', '', 'Subtotal:', '', vLiter.toFixed(2), '', utils.formatCurrency(vTotal)]);
+
+        if (curY > 175) { doc.addPage(); curY = 20; }
+        doc.setFontSize(9); doc.setFont(undefined, 'bold');
+        doc.setTextColor(52, 58, 64);
+        doc.text(`VENDOR: ${vendorName}`, 14, curY);
+        doc.setTextColor(0, 0, 0); doc.setFont(undefined, 'normal');
+        curY += 4;
+
+        doc.autoTable({
+          head: vHead, body: vBody, startY: curY,
+          styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak', textColor: 0 },
+          headStyles: { fillColor: [52, 58, 64], textColor: 255, fontStyle: 'bold', fontSize: 7 },
+          alternateRowStyles: { fillColor: [245, 245, 245] },
+          didParseCell: (data) => {
+            if (data.section === 'body' && data.row.index === vBody.length - 1) {
+              data.cell.styles.fontStyle = 'bold';
+              data.cell.styles.fillColor = [230, 230, 230];
+            }
+          },
+          margin: { left: 14, right: 14 }
+        });
+        curY = doc.lastAutoTable.finalY + 8;
+      });
+
+      if (curY + 15 > 200) { doc.addPage(); curY = 20; }
+      doc.setFontSize(10); doc.setFont(undefined, 'bold');
+      doc.text('RINGKASAN KESELURUHAN:', 14, curY);
+      doc.setFont(undefined, 'normal'); doc.setFontSize(9);
+      doc.text(`Total Literan: ${overallLiter.toFixed(2)} L`, 14, curY + 6);
+      doc.text(`Grand Total: ${utils.formatCurrency(overallTotal)}`, 160, curY + 6);
+      doc.save(this.generateFileName('pdf'));
+      return;
     }
 
     // ===== TABLE DATA =====
