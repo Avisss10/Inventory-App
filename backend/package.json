@@ -20,14 +20,11 @@
     "nodemon": "^3.1.10"
   },
   "pkg": {
-    "assets": [
-      "server.js",
-      "db.js",
-      "view/**/*"
-    ],
+    "assets": [],
     "scripts": [
       "server.js",
-      "db.js"
+      "db.js",
+      "routes/**/*.js"
     ],
     "targets": [
       "node18-win-x64"

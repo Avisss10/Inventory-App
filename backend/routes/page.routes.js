@@ -2,7 +2,12 @@ const express = require('express');
 const path = require('path');
 
 const router = express.Router();
-const frontendPath = path.join(__dirname, '../../frontend');
+
+const basePath = process.pkg
+  ? path.dirname(process.execPath)
+  : path.join(__dirname, '../..');
+
+const frontendPath = path.join(basePath, 'frontend');
 
 // HOME
 router.get('/', (req, res) => {
