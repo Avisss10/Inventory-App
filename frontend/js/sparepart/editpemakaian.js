@@ -1,20 +1,18 @@
 const API_URL = '/api';
-let allData = [];
-let filteredData = [];
 let currentEditId = null;
 
 // Load data saat halaman dimuat
 document.addEventListener('DOMContentLoaded', () => {
-    loadData();
     setupFilterListener();
     setupDeleteFormListener();
+    terapkanFilter(); // Ambil data sesuai filter default ("Hari Ini") saat load
 });
 
 // Setup listener untuk dropdown filter
 function setupFilterListener() {
     const filterType = document.getElementById('filterType');
     const dateGroup = document.getElementById('dateGroup');
-    
+
     filterType.addEventListener('change', () => {
         if (filterType.value === 'date') {
             dateGroup.style.display = 'flex';
@@ -24,19 +22,12 @@ function setupFilterListener() {
     });
 }
 
-// Load data pemakaian
-async function loadData() {
-    try {
-        const response = await fetch(`${API_URL}/pemakaian`);
-        if (!response.ok) throw new Error('Gagal mengambil data');
-
-        allData = await response.json();
-        filteredData = [...allData];
-        terapkanFilter(); // Terapkan filter default saat load
-    } catch (error) {
-        console.error('Error:', error);
-        showError('Gagal memuat data: ' + error.message);
-    }
+// Ambil data pemakaian dari server sesuai filter tanggal (atau semua jika tanggal kosong)
+async function fetchData(tanggal) {
+    const query = tanggal ? `?tanggal=${encodeURIComponent(tanggal)}` : '?limit=100000';
+    const response = await fetch(`${API_URL}/pemakaian${query}`);
+    if (!response.ok) throw new Error('Gagal mengambil data');
+    return response.json();
 }
 
 // Render tabel
@@ -93,8 +84,8 @@ function getTodayString() {
     return `${year}-${month}-${day}`;
 }
 
-// Terapkan filter
-function terapkanFilter() {
+// Terapkan filter (selalu ambil ulang dari server sesuai filter aktif)
+async function terapkanFilter() {
     const filterType = document.getElementById('filterType').value;
     const filterDate = document.getElementById('filterDate').value;
 
@@ -104,19 +95,23 @@ function terapkanFilter() {
     }
 
     let emptyMessage = 'Tidak ada data';
+    let tanggalQuery = null;
 
     if (filterType === 'today') {
-        const today = getTodayString();
-        filteredData = allData.filter(item => getTanggalString(item.tanggal) === today);
-        emptyMessage = `Tidak ada data pemakaian untuk hari ini (${formatDate(today)})`;
+        tanggalQuery = getTodayString();
+        emptyMessage = `Tidak ada data pemakaian untuk hari ini (${formatDate(tanggalQuery)})`;
     } else if (filterType === 'date') {
-        filteredData = allData.filter(item => getTanggalString(item.tanggal) === filterDate);
+        tanggalQuery = filterDate;
         emptyMessage = `Tidak ada data pemakaian pada tanggal ${formatDate(filterDate)}`;
-    } else {
-        filteredData = [...allData];
     }
 
-    renderTable(filteredData, emptyMessage);
+    try {
+        const data = await fetchData(tanggalQuery);
+        renderTable(data, emptyMessage);
+    } catch (error) {
+        console.error('Error:', error);
+        showError('Gagal memuat data: ' + error.message);
+    }
 }
 
 // Reset filter
@@ -124,7 +119,6 @@ function resetFilter() {
     document.getElementById('filterType').value = 'today';
     document.getElementById('filterDate').value = '';
     document.getElementById('dateGroup').style.display = 'none';
-    filteredData = [...allData];
     terapkanFilter();
 }
 
@@ -215,7 +209,7 @@ document.getElementById('editForm').addEventListener('submit', async (e) => {
         
         alert(result.message || 'Data berhasil diperbarui dan histori tersimpan');
         closeModal();
-        loadData();
+        terapkanFilter();
     } catch (error) {
         console.error('Error:', error);
         alert('Gagal menyimpan: ' + error.message);
@@ -288,7 +282,7 @@ function setupDeleteFormListener() {
             
             alert(result.message || 'Data berhasil dihapus dan histori tersimpan');
             closeDeleteModal();
-            loadData();
+            terapkanFilter();
         } catch (error) {
             console.error('Error:', error);
             alert('Gagal menghapus: ' + error.message);

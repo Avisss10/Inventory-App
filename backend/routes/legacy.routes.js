@@ -601,12 +601,20 @@ router.post("/api/pemakaian", (req, res) => {
 });
 
 // GET /pemakaian
-// Page: rekapsemua.html | JS: js/sparepart/rekapsemua.js
-// Fungsi: Mengambil data pemakaian sparepart untuk laporan
+// Page: rekapsemua.html, editpemakaian.html | JS: js/sparepart/rekapsemua.js, js/sparepart/editpemakaian.js
+// Fungsi: Mengambil data pemakaian sparepart untuk laporan (opsional filter by tanggal)
 router.get("/api/pemakaian", (req, res) => {
+    const { tanggal } = req.query;
+
+    const dateRE = /^\d{4}-\d{2}-\d{2}$/;
+    if (tanggal && !dateRE.test(tanggal)) {
+        return res.status(400).json({ error: "tanggal harus format YYYY-MM-DD" });
+    }
+
     const limitVal = parseInt(req.query.limit) || 5000;
     const offsetVal = parseInt(req.query.offset) || 0;
-    const sql = `
+
+    let sql = `
     SELECT
       p.*,
       s.nama_sparepart,
@@ -616,11 +624,19 @@ router.get("/api/pemakaian", (req, res) => {
     FROM pemakaian_sparepart p
     LEFT JOIN stok_sparepart s ON p.sparepart_id = s.id
     LEFT JOIN kendaraan k ON p.kendaraan_id = k.id
-    ORDER BY p.tanggal DESC, p.id DESC
-    LIMIT ? OFFSET ?
   `;
 
-    db.query(sql, [limitVal, offsetVal], (err, results) => {
+    const params = [];
+
+    if (tanggal) {
+        sql += " WHERE DATE(p.tanggal) = ? ";
+        params.push(tanggal);
+    }
+
+    sql += " ORDER BY p.tanggal DESC, p.id DESC LIMIT ? OFFSET ? ";
+    params.push(limitVal, offsetVal);
+
+    db.query(sql, params, (err, results) => {
         if (err) {
             console.error("Error /pemakaian GET:", err);
             return res.status(500).json({ error: err.sqlMessage || err.message });
