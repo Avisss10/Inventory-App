@@ -40,14 +40,15 @@ async function loadData() {
 }
 
 // Render tabel
-function renderTable(data) {
+function renderTable(data, emptyMessage) {
     const tableBody = document.getElementById('tableBody');
     const totalData = document.getElementById('totalData');
-    
+
     totalData.textContent = data.length;
-    
+
     if (data.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="9" class="no-data">Tidak ada data</td></tr>';
+        const message = emptyMessage || 'Tidak ada data';
+        tableBody.innerHTML = `<tr><td colspan="9" class="no-data no-data-info">${message}</td></tr>`;
         return;
     }
     
@@ -68,37 +69,54 @@ function renderTable(data) {
     `).join('');
 }
 
-// Format tanggal
+// Format tanggal (dibaca langsung dari string, tanpa parsing Date/UTC)
 function formatDate(dateString) {
     if (!dateString) return '-';
-    const date = new Date(dateString);
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
+    const [year, month, day] = getTanggalString(dateString).split('-');
+    if (!year || !month || !day) return '-';
     return `${day}/${month}/${year}`;
+}
+
+// Ambil bagian tanggal (YYYY-MM-DD) dari string tanggal apa adanya,
+// tanpa parsing lewat Date/UTC agar tidak bergeser sehari akibat timezone
+function getTanggalString(tanggal) {
+    if (!tanggal) return '';
+    return String(tanggal).slice(0, 10);
+}
+
+// Format tanggal lokal (bukan UTC) untuk filter "Hari Ini"
+function getTodayString() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
 // Terapkan filter
 function terapkanFilter() {
     const filterType = document.getElementById('filterType').value;
     const filterDate = document.getElementById('filterDate').value;
-    
+
+    if (filterType === 'date' && !filterDate) {
+        alert('Silakan pilih tanggal terlebih dahulu');
+        return;
+    }
+
+    let emptyMessage = 'Tidak ada data';
+
     if (filterType === 'today') {
-        const today = new Date().toISOString().split('T')[0];
-        filteredData = allData.filter(item => {
-            const itemDate = new Date(item.tanggal).toISOString().split('T')[0];
-            return itemDate === today;
-        });
-    } else if (filterType === 'date' && filterDate) {
-        filteredData = allData.filter(item => {
-            const itemDate = new Date(item.tanggal).toISOString().split('T')[0];
-            return itemDate === filterDate;
-        });
+        const today = getTodayString();
+        filteredData = allData.filter(item => getTanggalString(item.tanggal) === today);
+        emptyMessage = `Tidak ada data pemakaian untuk hari ini (${formatDate(today)})`;
+    } else if (filterType === 'date') {
+        filteredData = allData.filter(item => getTanggalString(item.tanggal) === filterDate);
+        emptyMessage = `Tidak ada data pemakaian pada tanggal ${formatDate(filterDate)}`;
     } else {
         filteredData = [...allData];
     }
-    
-    renderTable(filteredData);
+
+    renderTable(filteredData, emptyMessage);
 }
 
 // Reset filter

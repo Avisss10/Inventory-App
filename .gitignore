@@ -1,0 +1,18 @@
+node_modules/
+backend/node_modules/
+
+# Build artifact
+Inventory-App.exe
+
+# Env files
+.env
+.env.local
+
+# Editor / OS
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*

@@ -244,6 +244,13 @@ tbody tr:hover {
     font-size: 0.95rem;
 }
 
+.no-data-info {
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-weight: 500;
+    border-radius: 8px;
+}
+
 .loading {
     text-align: center;
     padding: 40px;
