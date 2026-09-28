@@ -123,6 +123,33 @@ body {
      top: 8px;
      cursor: pointer;
  }
+ .preview-warning {
+     background: #fff3cd;
+     color: #856404;
+     border: 1px solid #ffeeba;
+     border-radius: 6px;
+     padding: 8px 12px;
+     margin-top: 10px;
+     font-size: 13px;
+ }
+ .preview-compare-table {
+     width: 100%;
+     border-collapse: collapse;
+     margin-top: 10px;
+     font-size: 13px;
+ }
+ .preview-compare-table th, .preview-compare-table td {
+     border: 1px solid #e0e0e0;
+     padding: 6px 8px;
+     text-align: left;
+ }
+ .preview-compare-table th {
+     background: #f0f0f0;
+ }
+ .preview-compare-table tr.field-mismatch td {
+     background: #fde3e3;
+     font-weight: 600;
+ }
  .modal-forms {
      display: flex;
      gap: 18px;

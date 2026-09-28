@@ -15,6 +15,17 @@
     let currentPage = 1;
     const rowsPerPage = 6;
 
+    // ===== FORMAT NUMBER (titik ribuan) =====
+    function formatNumber(value) {
+        return value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    }
+
+    // Auto-format harga saat mengetik
+    hargaInput.addEventListener('input', function(e) {
+        const rawValue = e.target.value.replace(/\D/g, '');
+        e.target.value = rawValue ? formatNumber(rawValue) : '';
+    });
+
     // ===== LOAD VENDOR =====
     async function loadVendors() {
         const res = await fetch("/api/vendor");
@@ -172,7 +183,7 @@
             no_seri: noSeriInput.value,
             jumlah: 1,
             satuan: "pcs",
-            harga: hargaInput.value,
+            harga: parseInt(hargaInput.value.replace(/\./g, '')) || 0,
             id_vendor: vendorObj.id
         };
 
@@ -205,7 +216,7 @@
         }
         merkBanInput.value = merk_ban;
         noSeriInput.value = no_seri;
-        hargaInput.value = harga;
+        hargaInput.value = formatNumber(String(Number(harga) || 0));
         const vendorObj = (window._vendorData || []).find(v => v.id == id_vendor);
         vendorInput.value = vendorObj ? vendorObj.nama_vendor : '';
         submitBtn.textContent = "Update";

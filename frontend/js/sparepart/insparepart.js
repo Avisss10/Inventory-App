@@ -203,13 +203,7 @@ const bm_vendor = document.getElementById('bm_vendor');
 
 // stock sparepart form fields
 const sp_id = document.getElementById('sp_id');
-const sp_tgl = document.getElementById('sp_tgl');
-const sp_nama = document.getElementById('sp_nama');
-const sp_no_seri = document.getElementById('sp_no_seri');
 const sp_jumlah = document.getElementById('sp_jumlah');
-const sp_satuan = document.getElementById('sp_satuan');
-const sp_harga = document.getElementById('sp_harga');
-const sp_vendor = document.getElementById('sp_vendor');
 
 // helper: open/close modal
 function openModal() {
@@ -219,6 +213,41 @@ function openModal() {
 function closeModal() {
     editModal.style.display = 'none';
     editModal.setAttribute('aria-hidden', 'true');
+}
+
+// ===== PREVIEW PERBANDINGAN (Barang Masuk vs Stock Sparepart, nilai lama) =====
+function fillPreviewCompare(barangMasuk, sparepart) {
+    const fmtTgl = (v) => v ? v.substring(0, 10) : '';
+    const fmtHarga = (v) => (Number(v) || 0).toLocaleString('id-ID');
+    const fmtJumlah = (v) => (parseFloat(v) || 0).toString();
+
+    const fields = [
+        { key: 'tgl', bm: fmtTgl(barangMasuk.tgl_sparepart_masuk), sp: fmtTgl(sparepart.tgl_sparepart_masuk) },
+        { key: 'nama', bm: barangMasuk.nama_sparepart || '', sp: sparepart.nama_sparepart || '' },
+        { key: 'no_seri', bm: barangMasuk.no_seri || '', sp: sparepart.no_seri || '' },
+        { key: 'satuan', bm: barangMasuk.satuan || '', sp: sparepart.satuan || '' },
+        { key: 'harga', bm: fmtHarga(barangMasuk.harga), sp: fmtHarga(sparepart.harga) },
+        { key: 'vendor', bm: barangMasuk.nama_vendor || '', sp: sparepart.nama_vendor || '' },
+        { key: 'jumlah', bm: fmtJumlah(barangMasuk.jumlah), sp: fmtJumlah(sparepart.jumlah) }
+    ];
+
+    let anyMismatch = false;
+
+    fields.forEach(({ key, bm, sp }) => {
+        const cellBM = document.getElementById(`prev_bm_${key}`);
+        const cellSP = document.getElementById(`prev_sp_${key}`);
+        const row = document.querySelector(`#previewCompareTable tr[data-field="${key}"]`);
+        if (cellBM) cellBM.textContent = bm;
+        if (cellSP) cellSP.textContent = sp;
+
+        // jumlah boleh berbeda (stok berkurang oleh pemakaian), jangan ditandai mismatch
+        const isMismatch = key !== 'jumlah' && bm !== sp;
+        if (row) row.classList.toggle('field-mismatch', isMismatch);
+        if (isMismatch) anyMismatch = true;
+    });
+
+    const warning = document.getElementById('previewMismatchWarning');
+    if (warning) warning.style.display = anyMismatch ? 'block' : 'none';
 }
 
 // ===== EDIT (buka modal dan isi kedua form) =====
@@ -253,17 +282,11 @@ async function editSparepart(id) {
         bm_harga.value = hargaBM.toLocaleString('id-ID');
         bm_vendor.value = barangMasuk.nama_vendor || '';
 
-        // isi form Stock Sparepart
+        // isi jumlah Stock Sparepart (identitas barang dipakai bersama dari form Barang Masuk)
         sp_id.value = sparepart.id || '';
-        sp_tgl.value = sparepart.tgl_sparepart_masuk ? sparepart.tgl_sparepart_masuk.substring(0,10) : '';
-        sp_nama.value = sparepart.nama_sparepart || '';
-        sp_no_seri.value = sparepart.no_seri || '';
         sp_jumlah.value = sparepart.jumlah || 0;
-        sp_satuan.value = sparepart.satuan || '';
-        // Format harga: ambil angka murni, baru format
-        const hargaSP = Number(sparepart.harga) || 0;
-        sp_harga.value = hargaSP.toLocaleString('id-ID');
-        sp_vendor.value = sparepart.nama_vendor || '';
+
+        fillPreviewCompare(barangMasuk, sparepart);
 
         // RESET FLAG SETELAH DELAY KECIL (pastikan semua event selesai)
         setTimeout(() => {
@@ -278,17 +301,15 @@ async function editSparepart(id) {
     }
 }
 
-// ===== SAVE BOTH INDEPENDENTLY (simpan kedua tabel secara terpisah) =====
+// ===== SAVE BOTH (identitas barang satu form, jumlah terpisah per tabel) =====
 async function saveBothIndependently() {
-    const vendorNameBM = bm_vendor.value.trim();
-    const vendorNameSP = sp_vendor.value.trim();
+    const vendorName = bm_vendor.value.trim();
     const vendorData = window._vendorData || [];
 
-    const vendorObjBM = vendorData.find(v => v.nama_vendor.trim().toLowerCase() === vendorNameBM.toLowerCase());
-    const vendorObjSP = vendorData.find(v => v.nama_vendor.trim().toLowerCase() === vendorNameSP.toLowerCase());
+    const vendorObj = vendorData.find(v => v.nama_vendor.trim().toLowerCase() === vendorName.toLowerCase());
 
-    if (!vendorObjBM || !vendorObjSP) {
-        alert("Vendor tidak valid pada salah satu form. Pastikan memilih vendor dari daftar.");
+    if (!vendorObj) {
+        alert("Vendor tidak valid. Pastikan memilih vendor dari daftar.");
         return;
     }
 
@@ -297,26 +318,19 @@ async function saveBothIndependently() {
         return parseInt(cleaned) || 0;
     };
 
-    // Payload terpisah untuk masing-masing tabel
-    const payloadBM = {
+    // Identitas barang (tanggal, nama, no seri, satuan, harga, vendor) sama untuk kedua tabel
+    const identitas = {
         tgl_sparepart_masuk: bm_tgl.value || null,
         nama_sparepart: bm_nama.value || '',
         no_seri: bm_no_seri.value || '',
-        jumlah: Number(bm_jumlah.value) || 0,
         satuan: bm_satuan.value || '',
         harga: parseHarga(bm_harga.value),
-        id_vendor: vendorObjBM.id
+        id_vendor: vendorObj.id
     };
-    
-    const payloadSP = {
-        tgl_sparepart_masuk: sp_tgl.value || null,
-        nama_sparepart: sp_nama.value || '',
-        no_seri: sp_no_seri.value || '',
-        jumlah: Number(sp_jumlah.value) || 0,
-        satuan: sp_satuan.value || '',
-        harga: parseHarga(sp_harga.value),
-        id_vendor: vendorObjSP.id
-    };
+
+    // Jumlah tetap terpisah: barang_masuk = jumlah asli saat masuk, stok_sparepart = sisa stok saat ini
+    const payloadBM = { ...identitas, jumlah: Number(bm_jumlah.value) || 0 };
+    const payloadSP = { ...identitas, jumlah: Number(sp_jumlah.value) || 0 };
 
     console.log('Payload Barang Masuk:', payloadBM);
     console.log('Payload Stock Sparepart:', payloadSP);
@@ -382,16 +396,6 @@ bm_harga.addEventListener('input', function(e){
     e.target.value = rawValue ? Number(rawValue).toLocaleString('id-ID') : '';
 });
 
-sp_harga.addEventListener('input', function(e){ 
-    if (isSettingValue) return;
-    
-    // Ambil angka murni (hapus semua non-digit)
-    const rawValue = e.target.value.replace(/\D/g, '');
-    // Format dengan locale Indonesia
-    e.target.value = rawValue ? Number(rawValue).toLocaleString('id-ID') : '';
-});
-
-
 // ===== DELETE =====
 async function deleteSparepart(id) {
     try {
@@ -450,6 +454,12 @@ Data Barang Masuk:
         alert("Terjadi kesalahan saat menghapus data");
     }
 }
+
+// Auto-format harga (titik ribuan) saat mengetik di form Input Sparepart
+hargaInput.addEventListener('input', function(e) {
+    const rawValue = e.target.value.replace(/\D/g, '');
+    e.target.value = rawValue ? formatNumber(rawValue) : '';
+});
 
 // ===== FILTER =====
 filterInput.addEventListener('input', function() {
